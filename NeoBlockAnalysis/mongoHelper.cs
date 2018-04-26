@@ -1,0 +1,139 @@
+﻿using MongoDB.Bson;
+using MongoDB.Bson.IO;
+using MongoDB.Driver;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace NeoBlockAnalysis
+{
+    class mongoHelper
+    {
+        public static int GetMaxIndex(string mongodbConnStr,string mongodbDatabase, string collName,string key,string findFliter = "{}")
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(collName);
+            var data = collection.Find(BsonDocument.Parse(findFliter)).Sort(BsonDocument.Parse("{"+key+":-1}")).Limit(1).ToList();
+            client = null;
+            return data.Count == 0 ? -1 : (int)data[0][key];
+        }
+
+        //存入某个数据
+        public static void InsetOne(string mongodbConnStr, string mongodbDatabase, string collName, string value)
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(collName);
+            try
+            {
+                collection.InsertOne(BsonDocument.Parse(value));
+            }
+            catch (Exception e)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(e);
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+            client = null;
+        }
+
+        public static BsonDocument FindOne(string mongodbConnStr, string mongodbDatabase, string collName, string findFliter)
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(collName);
+            try
+            {
+                List<BsonDocument> query = collection.Find(BsonDocument.Parse(findFliter)).Limit(1).ToList();
+                client = null;
+                if (query.Count > 0)
+                {
+
+                    return query[0];
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (Exception e)
+            {
+                return FindOne(mongodbConnStr, mongodbDatabase,collName, findFliter);
+            }
+        }
+
+        public static void ReplaceData(string mongodbConnStr, string mongodbDatabase, string collName,string whereFliter, string replaceFliter)
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(collName);
+            try
+            {
+                List<BsonDocument> query = collection.Find(whereFliter).ToList();
+                if (query.Count == 0)//表示并没有数据
+                {
+                    client = null;
+                    InsetOne(mongodbConnStr, mongodbDatabase,collName, replaceFliter);
+                }
+                else
+                {
+                    collection.ReplaceOne(BsonDocument.Parse(whereFliter), BsonDocument.Parse(replaceFliter));
+                    client = null;
+                }
+            }
+            catch (Exception e)
+            {
+                ReplaceData(mongodbConnStr,mongodbDatabase, collName, whereFliter, replaceFliter);
+            }
+
+
+        }
+
+        public static MyJson.JsonNode_Array GetData(string mongodbConnStr, string mongodbDatabase, string coll, string findFliter)
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(coll);
+
+            List<BsonDocument> query = collection.Find(BsonDocument.Parse(findFliter)).ToList();
+            client = null;
+
+            if (query.Count > 0)
+            {
+                var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
+                MyJson.JsonNode_Array JA = MyJson.Parse(query.ToJson(jsonWriterSettings)) as MyJson.JsonNode_Array;
+                foreach (MyJson.JsonNode_Object j in JA)
+                {
+                    j.Remove("_id");
+                }
+                return JA;
+            }
+            else { return new MyJson.JsonNode_Array(); }
+        }
+
+
+
+        public static void DelData(string mongodbConnStr, string mongodbDatabase, string coll, string findFliter)
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(coll);
+            var query = collection.DeleteMany(BsonDocument.Parse(findFliter));
+            client = null;
+        }
+
+        public static long GetDataCount(string mongodbConnStr, string mongodbDatabase, string coll)
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(coll);
+
+            var txCount = collection.Find(new BsonDocument()).Count();
+
+            client = null;
+
+            return txCount;
+        }
+    }
+}
