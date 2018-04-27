@@ -52,7 +52,6 @@ namespace NeoBlockAnalysis
 
         void StorageTx(Int64 blockindex)
         {
-            //从api服务器获取NEP5transfer数据(从当前的高度来继续获取数据)
             Console.WriteLine("address_tx:" + blockindex);
 
             var findFliter = "{blockindex:" + blockindex + "}";
@@ -73,6 +72,7 @@ namespace NeoBlockAnalysis
             address_tx.blocktime = jo["blocktime"].ToString();
             address_tx.type = "out";
             address_tx.assetType = "utxo";
+            address_tx.txType = jo["type"].ToString();
             string txid = jo["txid"].ToString();
             address_tx.txid = txid;
 
@@ -177,6 +177,7 @@ namespace NeoBlockAnalysis
         public string txid;
         public string type;
         public string assetType;
+        public string txType;
         public MyJson.JsonNode_Array vin;
         public MyJson.JsonNode_Array vout;
         public MyJson.JsonNode_Object value = new MyJson.JsonNode_Object();
@@ -187,12 +188,13 @@ namespace NeoBlockAnalysis
         {
 
         }
-        public Address_Tx(string _addr, string _txid,string _type,string _assetType,MyJson.JsonNode_Array _vin, MyJson.JsonNode_Array _vout, MyJson.JsonNode_Object _value, int _blockindex, string _blocktime)
+        public Address_Tx(string _addr, string _txid,string _type,string _assetType,string _txType, MyJson.JsonNode_Array _vin, MyJson.JsonNode_Array _vout, MyJson.JsonNode_Object _value, int _blockindex, string _blocktime)
         {
             this.addr = _addr;
             this.txid = _txid;
             this.type = _type;
             this.assetType = _assetType;
+            this.txType = _txType;
             this.vin = _vin;
             this.vout = _vout;
             this.value = _value;
@@ -208,6 +210,7 @@ namespace NeoBlockAnalysis
             jo["txid"] = new MyJson.JsonNode_ValueString(txid); 
             jo["type"] = new MyJson.JsonNode_ValueString(type); 
             jo["assetType"] = new MyJson.JsonNode_ValueString(assetType);
+            jo["txType"] = new MyJson.JsonNode_ValueString(txType);
             jo["vin"] = vin;
             jo["vout"] = vout;
             jo["value"] = value; 

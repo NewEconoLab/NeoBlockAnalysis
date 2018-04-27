@@ -72,7 +72,7 @@ namespace NeoBlockAnalysis
             string  str_value = jo["value"].ToString();
 
             double value = double.Parse(str_value);
-
+            int blockindex_cur = int.Parse(jo["blockindex"].ToString());
 
             if (!string.IsNullOrEmpty(from))
             {
@@ -81,7 +81,6 @@ namespace NeoBlockAnalysis
                 double value_cur = jo_assetfrom!=null ? double.Parse(jo_assetfrom["value_cur"].ToString()) : 0;
                 double value_pre = jo_assetfrom!=null ? double.Parse(jo_assetfrom["value_pre"].ToString()) : 0;
 
-                int blockindex_cur = int.Parse(jo["blockindex"].ToString());
                 int blockindex_cur_from = jo_assetfrom != null ? int.Parse(jo_assetfrom["blockindex"].ToString()) : blockindex_cur;
 
                 MyJson.JsonNode_Object jo_assetfromNew = new MyJson.JsonNode_Object();
@@ -122,12 +121,11 @@ namespace NeoBlockAnalysis
                 double value_cur = jo_assetto != null ? double.Parse(jo_assetto["value_cur"].ToString()) : 0;
                 double value_pre = jo_assetto != null ? double.Parse(jo_assetto["value_pre"].ToString()) : 0;
 
-                int blockindex_cur = int.Parse(jo["blockindex"].ToString());
-                int blockindex_cur_from = jo_assetto != null ? int.Parse(jo_assetto["blockindex"].ToString()) : blockindex_cur;
+                int blockindex_cur_to = jo_assetto != null ? int.Parse(jo_assetto["blockindex"].ToString()) : blockindex_cur;
 
                 MyJson.JsonNode_Object jo_assettoNew = new MyJson.JsonNode_Object();
 
-                if (blockindex_cur == blockindex_cur_from)
+                if (blockindex_cur == blockindex_cur_to)
                 {
                     if (isFirstHandlerBlockindex)
                     {
@@ -173,11 +171,15 @@ namespace NeoBlockAnalysis
             JOvout["address"] = new MyJson.JsonNode_ValueString(to);
             JAvout.Add(JOvout);
 
+            //获取区块所在时间
+            var blocktime = ((MyJson.JsonNode_Object)mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", "{index:" + blockindex_cur + "}")[0])["time"].ToString();
+
             MyJson.JsonNode_Object JOvalue = new MyJson.JsonNode_Object();
             JOvalue[asset] = new MyJson.JsonNode_ValueString((0 - value).ToString());
-            Address_Tx addressTx = new Address_Tx(from, jo["txid"].ToString(), "in", "nep5", JAvin, JAvout, JOvalue, int.Parse(jo["blockindex"].ToString()), "");
+            Address_Tx addressTx = new Address_Tx(from, jo["txid"].ToString(), "in", "nep5", "nep5", JAvin, JAvout, JOvalue, blockindex_cur, blocktime);
             mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx.toMyJson().ToString());
-            addressTx = new Address_Tx(to, jo["txid"].ToString(), "out", "nep5", JAvin, JAvout, JOvalue, int.Parse(jo["blockindex"].ToString()), "");
+            JOvalue[asset] = new MyJson.JsonNode_ValueString((0 + value).ToString());
+            addressTx = new Address_Tx(to, jo["txid"].ToString(), "out", "nep5", "nep5", JAvin, JAvout, JOvalue, blockindex_cur, blocktime);
             mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx.toMyJson().ToString());
 
         }
