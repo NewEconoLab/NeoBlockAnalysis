@@ -135,5 +135,19 @@ namespace NeoBlockAnalysis
 
             return txCount;
         }
+
+
+        public static int Getblockheight(string mongodbConnStr, string mongodbDatabase, string coll)
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(coll);
+            var sortBson = BsonDocument.Parse("{blockindex:-1}");
+            var query = collection.Find(new BsonDocument()).Sort(sortBson).Limit(1).ToList();
+            if (query.Count > 0)
+            { return (int)query[0]["blockindex"]; }
+            return 0;
+        }
+
     }
 }

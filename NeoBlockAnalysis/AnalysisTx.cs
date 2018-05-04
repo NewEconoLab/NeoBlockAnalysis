@@ -13,8 +13,8 @@ namespace NeoBlockAnalysis
         {
             Task task_StoragTx = new Task(() => {
                 //先获取tx已经获取到的高度
-                mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{}");
-                int blockindex = mongoHelper.GetMaxIndex(Program.mongodbConnStr,Program.mongodbDatabase,"address_tx", "blockindex","{\"assetType\":\"utxo\"}");
+                int blockindex = 0;
+                blockindex = mongoHelper.GetMaxIndex(Program.mongodbConnStr,Program.mongodbDatabase,"address_tx", "blockindex","{\"assetType\":\"utxo\"}");
                 if (Program.handlerminblockindex != -1)
                 { blockindex = Program.handlerminblockindex; }
                 var maxBlockIndex = 999999999;
@@ -33,7 +33,7 @@ namespace NeoBlockAnalysis
                         Console.WriteLine("已经处理到预期高度");
                         return;
                     }
-                    var cli_blockindex = mongoHelper.GetDataCount(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block");
+                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "address_tx");
                     if (blockindex <= cli_blockindex)
                     {
                         StorageTx(blockindex);
@@ -69,10 +69,13 @@ namespace NeoBlockAnalysis
             Address_Tx address_tx = new Address_Tx();
             address_tx.addr = jo["addr"].ToString();
             address_tx.blockindex = int.Parse(jo["blockindex"].ToString());
-            address_tx.blocktime = jo["blocktime"].ToString();
+
+            //获取区块所在时间
+            var blocktime = ((MyJson.JsonNode_Object)mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", "{index:" + address_tx.blockindex + "}")[0])["time"].ToString();
+            address_tx.blocktime = blocktime;
+
             address_tx.type = "out";
             address_tx.assetType = "utxo";
-            address_tx.txType = jo["type"].ToString();
             string txid = jo["txid"].ToString();
             address_tx.txid = txid;
 
@@ -82,6 +85,8 @@ namespace NeoBlockAnalysis
             {
                 //一个txid获取到的信息应该只会存在一条
                 MyJson.JsonNode_Object jo_raw = result[0] as MyJson.JsonNode_Object;
+
+                address_tx.txType = jo_raw["type"].ToString();
 
                 //定义一个输入包含utxo
                 MyJson.JsonNode_Array JAvin_utxo = new MyJson.JsonNode_Array();

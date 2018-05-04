@@ -31,7 +31,7 @@ namespace NeoBlockAnalysis
                         Console.WriteLine("已经处理到预期高度");
                         return;
                     }
-                    var cli_blockindex = mongoHelper.GetDataCount(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block");
+                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5transfer");
                     if (blockindex <= cli_blockindex)
                     {
                         StorageNep5Transfer(blockindex);
@@ -56,8 +56,10 @@ namespace NeoBlockAnalysis
             var findFliter = "{blockindex:" + blockindex + "}";
             MyJson.JsonNode_Array result=  mongoHelper.GetData(Program.neo_mongodbConnStr,Program.neo_mongodbDatabase, "NEP5transfer", findFliter);
             isFirstHandlerBlockindex = true;
-            foreach (MyJson.JsonNode_Object jo in result)
+            for (var i = 0; i < result.Count; i++)
             {
+                //Console.WriteLine("nep5transfer: "+blockindex+"~~~~~~~~~i:"+i);
+                MyJson.JsonNode_Object jo = result[i] as MyJson.JsonNode_Object;
                 mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer", jo.ToString());
                 //对nep5数据进行分析处理
                 HandlerNep5Transfer(jo);
@@ -109,9 +111,6 @@ namespace NeoBlockAnalysis
                 jo_assetfromNew["lastused"] = new MyJson.JsonNode_ValueString(jo["txid"].ToString());
                 //存入新的from地址的钱
                 mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + from + "\"}", jo_assetfromNew.ToString());
-
-
-
             }
 
             if (!string.IsNullOrEmpty(to))
