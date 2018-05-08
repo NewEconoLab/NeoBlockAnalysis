@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NeoBlockAnalysis
 {
-    class AnalysisNep5Transfer
+    class AnalysisNep5Transfer:IAnalysis
     {
         public void StartTask()
         {
@@ -110,7 +110,7 @@ namespace NeoBlockAnalysis
                 jo_assetfromNew["blockindex"] = new MyJson.JsonNode_ValueNumber(blockindex_cur);  //当前高度
                 jo_assetfromNew["lastused"] = new MyJson.JsonNode_ValueString(jo["txid"].ToString());
                 //存入新的from地址的钱
-                mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + from + "\"}", jo_assetfromNew.ToString());
+                mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + from + "\",asset:\"" + asset + "\"}", jo_assetfromNew.ToString());
             }
 
             if (!string.IsNullOrEmpty(to))
@@ -147,7 +147,7 @@ namespace NeoBlockAnalysis
                 jo_assettoNew["blockindex"] = new MyJson.JsonNode_ValueNumber(blockindex_cur); //所在高度
                 jo_assettoNew["lastused"] = new MyJson.JsonNode_ValueString(jo["txid"].ToString());
                 //存入新的to地址的钱
-                mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + to + "\"}", jo_assettoNew.ToString());
+                mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + to + "\",asset:\"" + asset + "\"}", jo_assettoNew.ToString());
             }
 
 
