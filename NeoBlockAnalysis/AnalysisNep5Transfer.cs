@@ -31,8 +31,8 @@ namespace NeoBlockAnalysis
                         Console.WriteLine("已经处理到预期高度");
                         return;
                     }
-                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5transfer");
-                    if (blockindex <= cli_blockindex)
+                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block");
+                    if (blockindex < cli_blockindex)
                     {
                         StorageNep5Transfer(blockindex);
                         blockindex++;
@@ -58,7 +58,7 @@ namespace NeoBlockAnalysis
             isFirstHandlerBlockindex = true;
             for (var i = 0; i < result.Count; i++)
             {
-                //Console.WriteLine("nep5transfer: "+blockindex+"~~~~~~~~~i:"+i);
+                Console.WriteLine("nep5transfer: "+blockindex+"~~~~~~~~~i:"+i);
                 MyJson.JsonNode_Object jo = result[i] as MyJson.JsonNode_Object;
                 mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer", jo.ToString());
                 //对nep5数据进行分析处理

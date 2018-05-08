@@ -33,8 +33,8 @@ namespace NeoBlockAnalysis
                         Console.WriteLine("已经处理到预期高度");
                         return;
                     }
-                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "address_tx");
-                    if (blockindex <= cli_blockindex)
+                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block");
+                    if (blockindex < cli_blockindex)//处理的数据要比库中的高度少一 
                     {
                         StorageTx(blockindex);
                         blockindex++;
@@ -59,7 +59,7 @@ namespace NeoBlockAnalysis
             isFirstHandlerBlockindex = true;
             for (var i = 0; i < result.Count; i++)
             {
-                Console.WriteLine("blockindex:"+ blockindex+"!!!!!!!i:"+i);
+                Console.WriteLine("blockindex:"+ blockindex+"~~~~~~~~~~~总数:"+result.Count+"!!!!!!!i:"+i);
                 HandlerAddressTx(result[i] as MyJson.JsonNode_Object);
             }
         }
@@ -85,6 +85,13 @@ namespace NeoBlockAnalysis
             {
                 //一个txid获取到的信息应该只会存在一条
                 MyJson.JsonNode_Object jo_raw = result[0] as MyJson.JsonNode_Object;
+
+
+                var scripts = jo_raw["scripts"] as MyJson.JsonNode_Array;
+                //先不处理多签的情况
+                if (scripts.Count > 1)
+                    return;
+
 
                 address_tx.txType = jo_raw["type"].ToString();
 
@@ -171,7 +178,7 @@ namespace NeoBlockAnalysis
             jo_assetNew["blockindex"] = new MyJson.JsonNode_ValueNumber(blockindex_cur); //所在高度
             jo_assetNew["lastused"] = new MyJson.JsonNode_ValueString(txid);
 
-            mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + addr + "\"}", jo_assetNew.ToString());
+            mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + addr + "\",asset:\"" + asset + "\"}", jo_assetNew.ToString());
         }
     }
 
