@@ -70,9 +70,6 @@ namespace NeoBlockAnalysis
             address_tx.addr = jo["addr"].ToString();
             address_tx.blockindex = int.Parse(jo["blockindex"].ToString());
 
-            //获取区块所在时间
-            var blocktime = ((MyJson.JsonNode_Object)mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", "{index:" + address_tx.blockindex + "}")[0])["time"].ToString();
-            address_tx.blocktime = blocktime;
 
             address_tx.type = "out";
             address_tx.assetType = "utxo";
@@ -86,12 +83,15 @@ namespace NeoBlockAnalysis
                 //一个txid获取到的信息应该只会存在一条
                 MyJson.JsonNode_Object jo_raw = result[0] as MyJson.JsonNode_Object;
 
-
                 var scripts = jo_raw["scripts"] as MyJson.JsonNode_Array;
                 //先不处理多签的情况
                 if (scripts.Count > 1)
                     return;
 
+
+                //获取区块所在时间
+                var blocktime = ((MyJson.JsonNode_Object)mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", "{index:" + address_tx.blockindex + "}")[0])["time"].ToString();
+                address_tx.blocktime = blocktime;
 
                 address_tx.txType = jo_raw["type"].ToString();
 
@@ -132,11 +132,6 @@ namespace NeoBlockAnalysis
                     }
                 }
 
-                foreach (var key in address_tx.value.Keys)
-                {
-                    HandlerAddressAsset(address_tx.addr, key, double.Parse(address_tx.value[key].ToString()),txid, int.Parse(jo["blockindex"].ToString()));
-                }
-
                 address_tx.vin = JAvin_utxo;
                 address_tx.vout = JAvout_utxo;
 
@@ -145,41 +140,6 @@ namespace NeoBlockAnalysis
             }
         }
         bool isFirstHandlerBlockindex = true;
-        void HandlerAddressAsset(string addr,string asset ,double value,string txid,int blockindex)
-        {
-            var jo_asset = mongoHelper.FindOne(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + addr + "\",asset:\""+ asset + "\"}");
-            double value_cur = jo_asset != null ? double.Parse(jo_asset["value_cur"].ToString()) : 0;
-            double value_pre = jo_asset != null ? double.Parse(jo_asset["value_pre"].ToString()) : 0;
-            int blockindex_cur = blockindex;
-            int blockindex_cur_from = jo_asset != null ? int.Parse(jo_asset["blockindex"].ToString()) : blockindex_cur;
-
-            MyJson.JsonNode_Object jo_assetNew = new MyJson.JsonNode_Object();
-
-            if (blockindex_cur == blockindex_cur_from)
-            {
-                if (isFirstHandlerBlockindex)
-                {
-                    value_cur = 0;
-                }
-                jo_assetNew["value_pre"] = new MyJson.JsonNode_ValueNumber(value_pre);
-            }
-            else
-            {
-                jo_assetNew["value_pre"] = new MyJson.JsonNode_ValueNumber(value_cur + value_pre);
-                value_cur = 0;
-
-            }
-            isFirstHandlerBlockindex = false;
-            //to 就是要++的值
-            value_cur += value;
-            jo_assetNew["value_cur"] = new MyJson.JsonNode_ValueNumber((double)value_cur);
-            jo_assetNew["asset"] = new MyJson.JsonNode_ValueString(asset);
-            jo_assetNew["addr"] = new MyJson.JsonNode_ValueString(addr);
-            jo_assetNew["blockindex"] = new MyJson.JsonNode_ValueNumber(blockindex_cur); //所在高度
-            jo_assetNew["lastused"] = new MyJson.JsonNode_ValueString(txid);
-
-            mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + addr + "\",asset:\"" + asset + "\"}", jo_assetNew.ToString());
-        }
     }
 
 

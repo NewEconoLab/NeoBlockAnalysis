@@ -149,5 +149,28 @@ namespace NeoBlockAnalysis
             return 0;
         }
 
+        public static MyJson.JsonNode_Array GetDataPages(string mongodbConnStr, string mongodbDatabase, string coll, string sortStr, int pageCount, int pageNum, string findBson = "{}")
+        {
+            var client = new MongoClient(mongodbConnStr);
+            var database = client.GetDatabase(mongodbDatabase);
+            var collection = database.GetCollection<BsonDocument>(coll);
+
+            List<BsonDocument> query = collection.Find(BsonDocument.Parse(findBson)).Sort(sortStr).Skip(pageCount * (pageNum - 1)).Limit(pageCount).ToList();
+            client = null;
+
+            if (query.Count > 0)
+            {
+
+                var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
+                MyJson.JsonNode_Array JA = MyJson.Parse(query.ToJson(jsonWriterSettings)) as MyJson.JsonNode_Array;
+                foreach (MyJson.JsonNode_Object j in JA)
+                {
+                    j.Remove("_id");
+                }
+                return JA;
+            }
+            else { return new MyJson.JsonNode_Array(); }
+        }
+
     }
 }

@@ -14,13 +14,13 @@ namespace NeoBlockAnalysis
 
                 while (true)
                 {
-                    DateTime start = DateTime.Now;
+                    //DateTime start = DateTime.Now;
 
                     StartAnalysis();
 
-                    DateTime end = DateTime.Now;
-                    var doTime = (end - start).TotalMilliseconds;
-                    Console.WriteLine("总共处理了："+ doTime);
+                    //DateTime end = DateTime.Now;
+                    //var doTime = (end - start).TotalMilliseconds;
+                    //Console.WriteLine("总共处理了："+ doTime);
                     Thread.Sleep(Program.sleepTime);
                 }
             });
@@ -29,25 +29,71 @@ namespace NeoBlockAnalysis
 
         private void StartAnalysis()
         {
-            MyJson.JsonNode_Array result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "asset", "{}");
+            HandlerNep5();
+            HandlerUtxo();
+        }
+
+        private void HandlerNep5()
+        {
+            MyJson.JsonNode_Array result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5asset", "{}");
             for (var i = 0; i < result.Count; i++)
             {
-                HandlerAssetRank((result[i] as MyJson.JsonNode_Object)["id"].ToString());
+                string assetId = (result[i] as MyJson.JsonNode_Object)["id"].ToString();
+                //从assetRank中获取这个资产的所有地址的钱
+                var Ja_result = mongoHelper.GetData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{\"asset\":\"" + assetId + "\"}");
+                var count = Ja_result.Count;
+                for (var ii = 0; ii < count; ii++)
+                {
+                    var Jo_result = Ja_result[ii] as MyJson.JsonNode_Object;
+                    var value = double.Parse(Jo_result["value_pre"].ToString()) + double.Parse(Jo_result["value_cur"].ToString());
+                    var addr = Jo_result["addr"].ToString();
+                    MyJson.JsonNode_Object j = new MyJson.JsonNode_Object();
+                    j["asset"] = new MyJson.JsonNode_ValueString(assetId);
+                    j["balance"] = new MyJson.JsonNode_ValueNumber((double)value);
+                    j["addr"] = new MyJson.JsonNode_ValueString(addr);
+                    mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "allAssetRank", "{addr:\"" + addr + "\",asset:\"" + assetId + "\"}", j.ToString());
+                }
             }
         }
 
-        private void HandlerAssetRank(string assetId)
+        private void HandlerUtxo()
         {
-            //从assetRank中获取这个资产的所有地址的钱
-            var Ja_result = mongoHelper.GetData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{\"asset\":\""+assetId+"\"}");
-            var count = Ja_result.Count;
-            for (var i = 0; i < count; i++)
+            //获取已有的所有的地址 （分段）
+            var count = mongoHelper.GetDataCount(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "address");
+            count = count/1000 +1;
+            for (var i = 1; i < count+1; i++)
             {
-                var Jo_result = Ja_result[i]  as MyJson.JsonNode_Object;
-                var value = double.Parse(Jo_result["value_pre"].ToString())+ double.Parse(Jo_result["value_cur"].ToString());
-                var addr = Jo_result["addr"].ToString();
-                MyJson.JsonNode_Object jo_assetNew = new MyJson.JsonNode_Object();
-                mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "hadAnalysisAssetRank", "{addr:\"" + addr + "\",asset:\"" + assetId + "\"}", jo_assetNew.ToString());
+                Console.WriteLine("总共要循环："+ count +"~~现在循环到："+i);
+                MyJson.JsonNode_Array Ja_addressInfo =mongoHelper.GetDataPages(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "address", "{}", i,1000);
+                for (var ii = 0; ii < Ja_addressInfo.Count; ii++)
+                {
+                    var address = (Ja_addressInfo[ii] as MyJson.JsonNode_Object)["addr"].ToString();
+                    //获取这个address的所有的utxo
+                    var findFliter = "{addr:\"" + address + "\",used:''}";
+                    MyJson.JsonNode_Array utxos = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "utxo", findFliter);
+                    Dictionary<string, decimal> balance = new Dictionary<string, decimal>();
+                    foreach (MyJson.JsonNode_Object j in utxos)
+                    {
+                        if (!balance.ContainsKey(j["asset"].ToString()))
+                        {
+                            balance.Add(j["asset"].ToString(),decimal.Parse(j["value"].ToString()));
+                        }
+                        else
+                        {
+                            balance[j["asset"].ToString()] += decimal.Parse(j["value"].ToString());
+                        }
+                    }
+                    foreach (KeyValuePair<string, decimal> kv in balance)
+                    {
+                        MyJson.JsonNode_Object j = new MyJson.JsonNode_Object();
+                        j["asset"] = new MyJson.JsonNode_ValueString(kv.Key);
+                        j["balance"] = new MyJson.JsonNode_ValueNumber((double)kv.Value);
+                        j["addr"] = new MyJson.JsonNode_ValueString(address);
+
+                        mongoHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "allAssetRank", "{addr:\"" + address + "\",asset:\"" + kv.Key + "\"}", j.ToString());
+                    }
+
+                }
             }
         }
     }

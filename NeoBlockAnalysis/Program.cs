@@ -65,10 +65,26 @@ namespace NeoBlockAnalysis
                     break;
                 }
             }
-            if(isDoNep5 ==1 )
-                new AnalysisNep5Transfer().StartTask();
-            if( isDoTx ==1 )
-                new AnalysisTx().StartTask();
+
+            while (true)
+            {
+                ShowMenu2();
+                string input = Console.ReadLine();
+                if (input == "1")
+                {
+                    new AnalysisAssetRank().StartTask();
+                    break;
+                }
+                else if (input == "2")
+                {
+                    if (isDoNep5 == 1)
+                        new AnalysisNep5Transfer().StartTask();
+                    if (isDoTx == 1)
+                        new AnalysisTx().StartTask();
+                    break;
+                }
+            }
+
             //int blockindex = 2000000;
             //while (true)
             //{
@@ -86,6 +102,11 @@ namespace NeoBlockAnalysis
         static void ShowMenu()
         {
             Console.WriteLine("输入1开始测试网；输入2开始主网");
+        }
+
+        static void ShowMenu2()
+        {
+            Console.WriteLine("输入1开始执行分析工程；输入2执行入库工程");
         }
     }
 }
