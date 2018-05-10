@@ -2,6 +2,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -72,6 +73,7 @@ namespace NeoBlockAnalysis
                 string input = Console.ReadLine();
                 if (input == "1")
                 {
+                    System.Diagnostics.Process.Start("calc.exe");
                     new AnalysisAssetRank().StartTask();
                     break;
                 }

@@ -29,19 +29,29 @@ namespace NeoBlockAnalysis
 
         private void StartAnalysis()
         {
-            HandlerNep5();
-            HandlerUtxo();
+            try
+            {
+                HandlerNep5();
+                HandlerUtxo();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         private void HandlerNep5()
         {
             MyJson.JsonNode_Array result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5asset", "{}");
+            Console.WriteLine("nep5资产个数："+result.Count);
             for (var i = 0; i < result.Count; i++)
             {
-                string assetId = (result[i] as MyJson.JsonNode_Object)["id"].ToString();
+                string assetId = (result[i] as MyJson.JsonNode_Object)["assetid"].ToString();
+                Console.WriteLine("正在获取第  "+i+"  个资产，id："+ assetId);
                 //从assetRank中获取这个资产的所有地址的钱
                 var Ja_result = mongoHelper.GetData(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{\"asset\":\"" + assetId + "\"}");
                 var count = Ja_result.Count;
+                Console.WriteLine("该资产地址总数为："+ count);
                 for (var ii = 0; ii < count; ii++)
                 {
                     var Jo_result = Ja_result[ii] as MyJson.JsonNode_Object;
@@ -64,7 +74,7 @@ namespace NeoBlockAnalysis
             for (var i = 1; i < count+1; i++)
             {
                 Console.WriteLine("总共要循环："+ count +"~~现在循环到："+i);
-                MyJson.JsonNode_Array Ja_addressInfo =mongoHelper.GetDataPages(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "address", "{}", i,1000);
+                MyJson.JsonNode_Array Ja_addressInfo =mongoHelper.GetDataPages(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "address", "{}",1000,i);
                 for (var ii = 0; ii < Ja_addressInfo.Count; ii++)
                 {
                     var address = (Ja_addressInfo[ii] as MyJson.JsonNode_Object)["addr"].ToString();
