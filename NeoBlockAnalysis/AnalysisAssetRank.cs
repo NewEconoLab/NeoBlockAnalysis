@@ -14,13 +14,7 @@ namespace NeoBlockAnalysis
 
                 while (true)
                 {
-                    //DateTime start = DateTime.Now;
-
                     StartAnalysis();
-
-                    //DateTime end = DateTime.Now;
-                    //var doTime = (end - start).TotalMilliseconds;
-                    //Console.WriteLine("总共处理了："+ doTime);
                     Thread.Sleep(Program.sleepTime);
                 }
             });

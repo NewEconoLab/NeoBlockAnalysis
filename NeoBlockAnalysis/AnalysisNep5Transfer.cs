@@ -31,7 +31,7 @@ namespace NeoBlockAnalysis
                         Console.WriteLine("已经处理到预期高度");
                         return;
                     }
-                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block");
+                    var cli_blockindex = mongoHelper.GetNEP5transferheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5transfer");
                     if (blockindex < cli_blockindex)
                     {
                         StorageNep5Transfer(blockindex);

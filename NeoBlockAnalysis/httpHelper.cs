@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace NeoBlockAnalysis
 {
@@ -11,8 +12,6 @@ namespace NeoBlockAnalysis
     {
         public static string MakeRpcUrlPost(string url, string method, out byte[] data, params MyJson.IJsonNode[] _params)
         {
-            if (url.Last() != '/')
-                url = url + "/";
             var json = new MyJson.JsonNode_Object();
             json["id"] = new MyJson.JsonNode_ValueNumber(1);
             json["jsonrpc"] = new MyJson.JsonNode_ValueString("2.0");
@@ -47,6 +46,19 @@ namespace NeoBlockAnalysis
                 System.Threading.Thread.Sleep(100);
                 return HttpPost(url, data);
             }
+            return System.Text.Encoding.UTF8.GetString(retdata);
+        }
+
+        public static async Task<string> HttpGetAsyncy(string url)
+        {
+            WebClient wc = new WebClient();
+            return await wc.DownloadStringTaskAsync(url);
+        }
+        public static async Task<string> HttpPostAsyncy(string url, byte[] data)
+        {
+            WebClient wc = new WebClient();
+            wc.Headers["content-type"] = "text/plain;charset=UTF-8";
+            byte[] retdata = await wc.UploadDataTaskAsync(url, "POST", data);
             return System.Text.Encoding.UTF8.GetString(retdata);
         }
     }
