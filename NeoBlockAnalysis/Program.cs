@@ -30,7 +30,6 @@ namespace NeoBlockAnalysis
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)  //指定加载的配置文件
                 .Build();    //编译成对象  
 
-
             while (true)
             {
                 ShowMenu();
@@ -88,7 +87,7 @@ namespace NeoBlockAnalysis
                 {
                     Console.WriteLine("输入获取的高度");
                     string height = Console.ReadLine();
-                    Console.WriteLine("你输入的高度："+ height);
+                    Console.WriteLine("你输入的高度：" + height);
                     AnalysisAssetByHeight analysisAssetByHeight = new AnalysisAssetByHeight();
                     analysisAssetByHeight.height = int.Parse(height);
                     analysisAssetByHeight.StartTask();

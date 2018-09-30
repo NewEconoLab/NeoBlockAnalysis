@@ -70,9 +70,6 @@ namespace NeoBlockAnalysis
             address_tx.addr = jo["addr"].ToString();
             address_tx.blockindex = int.Parse(jo["blockindex"].ToString());
 
-
-            address_tx.type = "out";
-            address_tx.assetType = "utxo";
             string txid = jo["txid"].ToString();
             address_tx.txid = txid;
 
@@ -84,17 +81,17 @@ namespace NeoBlockAnalysis
                 MyJson.JsonNode_Object jo_raw = result[0] as MyJson.JsonNode_Object;
 
                 var scripts = jo_raw["scripts"] as MyJson.JsonNode_Array;
-                //先不处理多签的情况
+                //不处理多签的情况
                 if (scripts.Count > 1)
                     return;
-
 
                 //获取区块所在时间
                 var blocktime = ((MyJson.JsonNode_Object)mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", "{index:" + address_tx.blockindex + "}")[0])["time"].ToString();
                 address_tx.blocktime = blocktime;
 
                 address_tx.txType = jo_raw["type"].ToString();
-
+                address_tx.sysfee = jo_raw["sys_fee"].ToString();
+                address_tx.netfee = jo_raw["net_fee"].ToString();
                 //定义一个输入包含utxo
                 MyJson.JsonNode_Array JAvin_utxo = new MyJson.JsonNode_Array();
 
@@ -115,9 +112,27 @@ namespace NeoBlockAnalysis
                         JAvin_utxo.Add(vin);
                         if (vin["address"].ToString() == address_tx.addr)
                         {
-                            address_tx.type = "in";
-                            string value = address_tx.value.ContainsKey(vin["asset"].ToString()) ? address_tx.value[vin["asset"].ToString()].ToString() : "0";
-                            address_tx.value[vin["asset"].ToString()] = new MyJson.JsonNode_ValueString((decimal.Parse(value) - decimal.Parse(vin["value"].ToString())).ToString());
+                            string value;
+                            if (!address_tx.detail.ContainsKey(vin["asset"].ToString()))
+                            {
+                                //从asset表中获取这个资产的详情
+                                result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "asset", "{\"id\":\"" + vin["asset"].ToString() + "\"}");
+                                MyJson.JsonNode_Object assetInfo = result[0].AsDict();
+                                Detail detail = new Detail();
+                                detail.assetType = "UTXO";
+                                detail.assetName = assetInfo["name"].AsList()[0].AsDict()["name"].ToString();
+                                detail.assetSymbol = detail.assetName;
+                                detail.assetDecimals = "";
+                                detail.fromOrTo = "from";
+                                detail.value = "0";
+                                address_tx.detail[vin["asset"].ToString()] = detail.toMyJson();
+                                value = "0";
+                            }
+                            else
+                            {
+                                value = address_tx.detail[vin["asset"].ToString()].AsDict()["value"].ToString();
+                            }
+                            address_tx.detail[vin["asset"].ToString()].AsDict()["value"] = new MyJson.JsonNode_ValueString((decimal.Parse(value) - decimal.Parse(vin["value"].ToString())).ToString());
                         }
                     }
                 }
@@ -127,8 +142,28 @@ namespace NeoBlockAnalysis
                 {
                     if (jo_vout["address"].ToString() == address_tx.addr)
                     {
-                        string value = address_tx.value.ContainsKey(jo_vout["asset"].ToString()) ? address_tx.value[jo_vout["asset"].ToString()].ToString() : "0";
-                        address_tx.value[jo_vout["asset"].ToString()] = new MyJson.JsonNode_ValueString((decimal.Parse(value) + decimal.Parse(jo_vout["value"].ToString())).ToString());
+                        string value;
+                        if (!address_tx.detail.ContainsKey(jo_vout["asset"].ToString()))
+                        {
+                            //从asset表中获取这个资产的详情
+                            result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "asset", "{\"id\":\"" + jo_vout["asset"].ToString() + "\"}");
+                            MyJson.JsonNode_Object assetInfo = result[0].AsDict();
+                            Detail detail = new Detail();
+                            detail.assetType = "UTXO";
+                            detail.assetName = assetInfo["name"].AsList()[0].AsDict()["name"].ToString();
+                            detail.assetSymbol = detail.assetName;
+                            detail.assetDecimals = "";
+                            detail.fromOrTo = "from";
+                            detail.value = "0";
+                            address_tx.detail[jo_vout["asset"].ToString()] = detail.toMyJson();
+                            value = "0";
+                        }
+                        else
+                        {
+                            value = address_tx.detail[jo_vout["asset"].ToString()].AsDict()["value"].ToString();
+                        }
+                        address_tx.detail[jo_vout["asset"].ToString()].AsDict()["value"] = new MyJson.JsonNode_ValueString((decimal.Parse(value) - decimal.Parse(jo_vout["value"].ToString())).ToString());
+
                     }
                 }
 
@@ -140,56 +175,5 @@ namespace NeoBlockAnalysis
             }
         }
         bool isFirstHandlerBlockindex = true;
-    }
-
-
-    class Address_Tx
-    {
-        public string addr;
-        public string txid;
-        public string type;
-        public string assetType;
-        public string txType;
-        public MyJson.JsonNode_Array vin;
-        public MyJson.JsonNode_Array vout;
-        public MyJson.JsonNode_Object value = new MyJson.JsonNode_Object();
-        public int blockindex;
-        public string blocktime;
-
-        public Address_Tx()
-        {
-
-        }
-        public Address_Tx(string _addr, string _txid,string _type,string _assetType,string _txType, MyJson.JsonNode_Array _vin, MyJson.JsonNode_Array _vout, MyJson.JsonNode_Object _value, int _blockindex, string _blocktime)
-        {
-            this.addr = _addr;
-            this.txid = _txid;
-            this.type = _type;
-            this.assetType = _assetType;
-            this.txType = _txType;
-            this.vin = _vin;
-            this.vout = _vout;
-            this.value = _value;
-            this.blockindex = _blockindex;
-            this.blocktime = _blocktime;
-        }
-
-
-        public MyJson.JsonNode_Object toMyJson()
-        {
-            MyJson.JsonNode_Object jo = new MyJson.JsonNode_Object();
-            jo["addr"] = new MyJson.JsonNode_ValueString(addr);
-            jo["txid"] = new MyJson.JsonNode_ValueString(txid); 
-            jo["type"] = new MyJson.JsonNode_ValueString(type); 
-            jo["assetType"] = new MyJson.JsonNode_ValueString(assetType);
-            jo["txType"] = new MyJson.JsonNode_ValueString(txType);
-            jo["vin"] = vin;
-            jo["vout"] = vout;
-            jo["value"] = value; 
-            jo["blockindex"] = new MyJson.JsonNode_ValueNumber(blockindex); 
-            jo["blocktime"] = new MyJson.JsonNode_ValueString(blocktime);
-
-            return jo;
-        }
     }
 }

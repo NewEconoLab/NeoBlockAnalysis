@@ -12,33 +12,41 @@ namespace NeoBlockAnalysis
         public void StartTask()
         {
             Task task_StorageNep5Transfer = new Task(() => {
-                //先获取Nep5Transfer已经获取到的高度
-                int blockindex = mongoHelper.GetMaxIndex(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer", "blockindex");
-
-                if (Program.handlerminblockindex != -1)
-                { blockindex = Program.handlerminblockindex; }
-                var maxBlockIndex = 999999999;
-                if (Program.handlermaxblockindex != -1)
-                    maxBlockIndex = Program.handlermaxblockindex;
-
-                mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer", "{\"blockindex\":" + blockindex + "}");
-                mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"assetType\":\"nep5\",\"blockindex\":" + blockindex + "}");
-
-                while (true)
+                try
                 {
-                    if (blockindex >= maxBlockIndex)
+                    //先获取Nep5Transfer已经获取到的高度
+                    int blockindex = mongoHelper.GetMaxIndex(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer", "blockindex");
+
+                    if (Program.handlerminblockindex != -1)
+                    { blockindex = Program.handlerminblockindex; }
+                    var maxBlockIndex = 999999999;
+                    if (Program.handlermaxblockindex != -1)
+                        maxBlockIndex = Program.handlermaxblockindex;
+
+                    mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer", "{\"blockindex\":" + blockindex + "}");
+                    mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"assetType\":\"nep5\",\"blockindex\":" + blockindex + "}");
+
+                    while (true)
                     {
-                        Console.WriteLine("已经处理到预期高度");
-                        return;
+                        if (blockindex >= maxBlockIndex)
+                        {
+                            Console.WriteLine("已经处理到预期高度");
+                            return;
+                        }
+                        var cli_blockindex = mongoHelper.GetNEP5transferheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5transfer");
+                        if (blockindex < cli_blockindex)
+                        {
+                            StorageNep5Transfer(blockindex);
+                            blockindex++;
+                        }
+                        Thread.Sleep(Program.sleepTime);
                     }
-                    var cli_blockindex = mongoHelper.GetNEP5transferheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5transfer");
-                    if (blockindex < cli_blockindex)
-                    {
-                        StorageNep5Transfer(blockindex);
-                        blockindex++;
-                    }
-                    Thread.Sleep(Program.sleepTime);
                 }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+
             });
             task_StorageNep5Transfer.Start();
         }
@@ -170,15 +178,40 @@ namespace NeoBlockAnalysis
             JOvout["address"] = new MyJson.JsonNode_ValueString(to);
             JAvout.Add(JOvout);
 
+            var txid = jo["txid"].ToString();
             //获取区块所在时间
             var blocktime = ((MyJson.JsonNode_Object)mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", "{index:" + blockindex_cur + "}")[0])["time"].ToString();
 
+            //获取交易详情
+            var txinfo = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbConnStr, "tx", "{txid:\"" + txid + "\"}");
+            var sysfee = txinfo[0].AsDict()["sys_fee"].ToString();
+            var netfee = txinfo[0].AsDict()["net_fee"].ToString();
+            //获取资产详情
+            Detail detail = new Detail();
+            var assetInfo = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbConnStr, "NEP5asset", "{assetid:\"" + asset + "\"}");
+            //from 构造
+            detail.assetName = assetInfo[0].AsDict()["name"].ToString();
+            detail.assetDecimals = assetInfo[0].AsDict()["decimals"].ToString();
+            detail.assetSymbol = assetInfo[0].AsDict()["symbol"].ToString();
+            detail.value = (0-value).ToString();
+            detail.value = "from";
+
+            Address_Tx addressTx = new Address_Tx();
+            addressTx.detail = detail.toMyJson();
+            addressTx.addr = from;
+            addressTx.txid = txid;
+            addressTx.netfee = netfee;
+            addressTx.sysfee = sysfee;
+            addressTx.vin = JAvin;
+            addressTx.vout = JAvout;
+            addressTx.blockindex = blockindex_cur;
+            addressTx.blocktime = blocktime;
+
+
             MyJson.JsonNode_Object JOvalue = new MyJson.JsonNode_Object();
-            JOvalue[asset] = new MyJson.JsonNode_ValueString((0 - value).ToString());
-            Address_Tx addressTx = new Address_Tx(from, jo["txid"].ToString(), "in", "nep5", "nep5", JAvin, JAvout, JOvalue, blockindex_cur, blocktime);
             mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx.toMyJson().ToString());
-            JOvalue[asset] = new MyJson.JsonNode_ValueString((0 + value).ToString());
-            addressTx = new Address_Tx(to, jo["txid"].ToString(), "out", "nep5", "nep5", JAvin, JAvout, JOvalue, blockindex_cur, blocktime);
+            detail.value = (0 + value).ToString();
+            detail.fromOrTo = "to";
             mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx.toMyJson().ToString());
 
         }
