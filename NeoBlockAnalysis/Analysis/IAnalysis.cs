@@ -37,6 +37,7 @@ namespace NeoBlockAnalysis
         public string addr;
         public string txid;
         public string txType;
+        public bool isNep5;
         public MyJson.JsonNode_Array vin;
         public MyJson.JsonNode_Array vout;
         public MyJson.JsonNode_Object detail = new MyJson.JsonNode_Object();
@@ -57,11 +58,12 @@ namespace NeoBlockAnalysis
             jo["txType"] = new MyJson.JsonNode_ValueString(txType);
             jo["vin"] = vin;
             jo["vout"] = vout;
-            jo["result"] = detail;
+            jo["detail"] = detail;
             jo["netfee"] = new MyJson.JsonNode_ValueString(netfee);
             jo["sysfee"] = new MyJson.JsonNode_ValueString(sysfee);
             jo["blockindex"] = new MyJson.JsonNode_ValueNumber(blockindex);
             jo["blocktime"] = new MyJson.JsonNode_ValueString(blocktime);
+            jo["isNep5"] = new MyJson.JsonNode_ValueNumber(isNep5);
 
             return jo;
         }

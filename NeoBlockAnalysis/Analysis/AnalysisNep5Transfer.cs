@@ -24,7 +24,7 @@ namespace NeoBlockAnalysis
                         maxBlockIndex = Program.handlermaxblockindex;
 
                     mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer", "{\"blockindex\":" + blockindex + "}");
-                    mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"assetType\":\"nep5\",\"blockindex\":" + blockindex + "}");
+                    mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"isNep5\":true,\"blockindex\":" + blockindex + "}");
 
                     while (true)
                     {
@@ -183,18 +183,26 @@ namespace NeoBlockAnalysis
             var blocktime = ((MyJson.JsonNode_Object)mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", "{index:" + blockindex_cur + "}")[0])["time"].ToString();
 
             //获取交易详情
-            var txinfo = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbConnStr, "tx", "{txid:\"" + txid + "\"}");
-            var sysfee = txinfo[0].AsDict()["sys_fee"].ToString();
-            var netfee = txinfo[0].AsDict()["net_fee"].ToString();
+            var txinfo = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "tx", "{\"txid\":\"" + txid + "\"}");
+            var txType = "InvocationTransaction";
+            var sysfee = "0";
+            var netfee = "0";
+            if (txinfo.Count > 0)
+            {
+                txType = txinfo[0].AsDict()["type"].ToString();
+                sysfee = txinfo[0].AsDict()["sys_fee"].ToString();
+                netfee = txinfo[0].AsDict()["net_fee"].ToString();
+            }
+
             //获取资产详情
             Detail detail = new Detail();
-            var assetInfo = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbConnStr, "NEP5asset", "{assetid:\"" + asset + "\"}");
+            var assetInfo = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5asset", "{assetid:\"" + asset + "\"}");
             //from 构造
             detail.assetName = assetInfo[0].AsDict()["name"].ToString();
             detail.assetDecimals = assetInfo[0].AsDict()["decimals"].ToString();
             detail.assetSymbol = assetInfo[0].AsDict()["symbol"].ToString();
             detail.value = (0-value).ToString();
-            detail.value = "from";
+            detail.fromOrTo = "from";
 
             Address_Tx addressTx = new Address_Tx();
             addressTx.detail = detail.toMyJson();
@@ -206,12 +214,15 @@ namespace NeoBlockAnalysis
             addressTx.vout = JAvout;
             addressTx.blockindex = blockindex_cur;
             addressTx.blocktime = blocktime;
-
+            addressTx.isNep5 = true;
+            addressTx.txType = txType;
 
             MyJson.JsonNode_Object JOvalue = new MyJson.JsonNode_Object();
             mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx.toMyJson().ToString());
             detail.value = (0 + value).ToString();
             detail.fromOrTo = "to";
+            addressTx.addr = to;
+            addressTx.detail = detail.toMyJson();
             mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx.toMyJson().ToString());
 
         }

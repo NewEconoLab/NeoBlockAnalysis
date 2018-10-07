@@ -14,7 +14,7 @@ namespace NeoBlockAnalysis
             Task task_StoragTx = new Task(() => {
                 //先获取tx已经获取到的高度
                 int blockindex = 0;
-                blockindex = mongoHelper.GetMaxIndex(Program.mongodbConnStr,Program.mongodbDatabase,"address_tx", "blockindex","{\"assetType\":\"utxo\"}");
+                blockindex = mongoHelper.GetMaxIndex(Program.mongodbConnStr,Program.mongodbDatabase,"address_tx", "blockindex","{\"isNep5\":false}");
                 if (Program.handlerminblockindex != -1)
                 { blockindex = Program.handlerminblockindex; }
                 var maxBlockIndex = 999999999;
@@ -23,7 +23,7 @@ namespace NeoBlockAnalysis
                 //删除这个高度tx的所有数据
                 var count1 = mongoHelper.GetDataCount(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx");
                 Console.WriteLine("删之前的数据个数："+ count1);
-                mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"assetType\":\"utxo\",\"blockindex\":"+blockindex+"}");
+                mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"isNep5\":false,\"blockindex\":"+blockindex+"}");
                 var count2 = mongoHelper.GetDataCount(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx");
                 Console.WriteLine("删之后的数据个数：" + count2);
                 while (true)
@@ -162,15 +162,21 @@ namespace NeoBlockAnalysis
                         {
                             value = address_tx.detail[jo_vout["asset"].ToString()].AsDict()["value"].ToString();
                         }
-                        address_tx.detail[jo_vout["asset"].ToString()].AsDict()["value"] = new MyJson.JsonNode_ValueString((decimal.Parse(value) - decimal.Parse(jo_vout["value"].ToString())).ToString());
+                        var r = decimal.Parse(value) + decimal.Parse(jo_vout["value"].ToString());
+                        if (r > 0)
+                            address_tx.detail[jo_vout["asset"].ToString()].AsDict()["fromOrTo"] = new MyJson.JsonNode_ValueString("to");
+                        else
+                            address_tx.detail[jo_vout["asset"].ToString()].AsDict()["fromOrTo"] = new MyJson.JsonNode_ValueString("from");
+                        address_tx.detail[jo_vout["asset"].ToString()].AsDict()["value"] = new MyJson.JsonNode_ValueString(r.ToString());
 
                     }
                 }
-
+                //如果这个地址在这个交易里面没有资产变化就不入库
+                if (address_tx.detail.Keys.Count == 0)
+                    return;
                 address_tx.vin = JAvin_utxo;
                 address_tx.vout = JAvout_utxo;
-
-
+                address_tx.isNep5 = false;
                 mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", address_tx.toMyJson().ToString());
             }
         }
