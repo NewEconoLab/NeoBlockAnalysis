@@ -81,9 +81,7 @@ namespace NeoBlockAnalysis
                 MyJson.JsonNode_Object jo_raw = result[0] as MyJson.JsonNode_Object;
 
                 var scripts = jo_raw["scripts"] as MyJson.JsonNode_Array;
-                //不处理多签的情况
-                if (scripts.Count > 1)
-                    return;
+
 
                 //获取区块所在时间
                 var blocktime = ((MyJson.JsonNode_Object)mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", "{index:" + address_tx.blockindex + "}")[0])["time"].ToString();
@@ -97,6 +95,13 @@ namespace NeoBlockAnalysis
 
                 //获取这个tx的vin并根据vin中的txid来获取输入的utxo的信息
                 MyJson.JsonNode_Array JAvin = jo_raw["vin"] as MyJson.JsonNode_Array;
+
+
+                //过滤一些疑似交易所的复杂构造
+                if (scripts.Count > 1 && JAvin.Count > 200)
+                    return;
+
+
                 for (var i =0;i<JAvin.Count;i++)
                 {
                     Console.WriteLine("blockinde:"+ address_tx.blockindex + "   vin:"+i);

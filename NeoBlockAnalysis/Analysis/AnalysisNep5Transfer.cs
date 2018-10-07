@@ -81,15 +81,15 @@ namespace NeoBlockAnalysis
             string to = jo["to"].ToString();
             string  str_value = jo["value"].ToString();
 
-            double value = double.Parse(str_value);
+            decimal value = decimal.Parse(str_value);
             int blockindex_cur = int.Parse(jo["blockindex"].ToString());
 
             if (!string.IsNullOrEmpty(from))
             {
                 //获取这个资产 from地址的资产
                 var jo_assetfrom = mongoHelper.FindOne(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + from + "\",asset:\"" + asset + "\"}");
-                double value_cur = jo_assetfrom!=null ? double.Parse(jo_assetfrom["value_cur"].ToString()) : 0;
-                double value_pre = jo_assetfrom!=null ? double.Parse(jo_assetfrom["value_pre"].ToString()) : 0;
+                decimal value_cur = jo_assetfrom!=null ? decimal.Parse(jo_assetfrom["value_cur"].ToString()) : 0;
+                decimal value_pre = jo_assetfrom!=null ? decimal.Parse(jo_assetfrom["value_pre"].ToString()) : 0;
 
                 int blockindex_cur_from = jo_assetfrom != null ? int.Parse(jo_assetfrom["blockindex"].ToString()) : blockindex_cur;
 
@@ -101,11 +101,11 @@ namespace NeoBlockAnalysis
                     {
                         value_cur = 0;
                     }
-                    jo_assetfromNew["value_pre"] = new MyJson.JsonNode_ValueNumber(value_pre);
+                    jo_assetfromNew["value_pre"] = new MyJson.JsonNode_ValueNumber((double)value_pre);
                 }
                 else
                 {
-                    jo_assetfromNew["value_pre"] = new MyJson.JsonNode_ValueNumber(value_cur + value_pre);
+                    jo_assetfromNew["value_pre"] = new MyJson.JsonNode_ValueNumber((double)value_cur + (double)value_pre);
                     value_cur = 0 ;
                 }
 
@@ -125,8 +125,8 @@ namespace NeoBlockAnalysis
             {
                 //获取这个资产 to地址的资产
                 var jo_assetto = mongoHelper.FindOne(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + to + "\",asset:\"" + asset + "\"}");
-                double value_cur = jo_assetto != null ? double.Parse(jo_assetto["value_cur"].ToString()) : 0;
-                double value_pre = jo_assetto != null ? double.Parse(jo_assetto["value_pre"].ToString()) : 0;
+                decimal value_cur = jo_assetto != null ? decimal.Parse(jo_assetto["value_cur"].ToString()) : 0;
+                decimal value_pre = jo_assetto != null ? decimal.Parse(jo_assetto["value_pre"].ToString()) : 0;
 
                 int blockindex_cur_to = jo_assetto != null ? int.Parse(jo_assetto["blockindex"].ToString()) : blockindex_cur;
 
@@ -138,11 +138,11 @@ namespace NeoBlockAnalysis
                     {
                         value_cur = 0;
                     }
-                    jo_assettoNew["value_pre"] = new MyJson.JsonNode_ValueNumber(value_pre);
+                    jo_assettoNew["value_pre"] = new MyJson.JsonNode_ValueNumber((double)value_pre);
                 }
                 else
                 {
-                    jo_assettoNew["value_pre"] = new MyJson.JsonNode_ValueNumber(value_cur + value_pre);
+                    jo_assettoNew["value_pre"] = new MyJson.JsonNode_ValueNumber((double)value_cur + (double)value_pre);
                     value_cur = 0;
 
                 }
@@ -205,7 +205,7 @@ namespace NeoBlockAnalysis
             detail.fromOrTo = "from";
 
             Address_Tx addressTx = new Address_Tx();
-            addressTx.detail = detail.toMyJson();
+            addressTx.detail[asset] = detail.toMyJson();
             addressTx.addr = from;
             addressTx.txid = txid;
             addressTx.netfee = netfee;
