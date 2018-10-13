@@ -20,14 +20,15 @@ namespace NeoBlockAnalysis
         }
 
         //存入某个数据
-        public static void InsetOne(string mongodbConnStr, string mongodbDatabase, string collName, string value)
+        public static void InsetOne<T>(string mongodbConnStr, string mongodbDatabase, string collName, T value)
         {
             var client = new MongoClient(mongodbConnStr);
             var database = client.GetDatabase(mongodbDatabase);
-            var collection = database.GetCollection<BsonDocument>(collName);
+            var collection = database.GetCollection<T>(collName);
+
+            collection.InsertOne(value);
             try
             {
-                collection.InsertOne(BsonDocument.Parse(value));
             }
             catch (Exception e)
             {
@@ -74,7 +75,7 @@ namespace NeoBlockAnalysis
                 if (query.Count == 0)//表示并没有数据
                 {
                     client = null;
-                    InsetOne(mongodbConnStr, mongodbDatabase,collName, replaceFliter);
+                    InsetOne(mongodbConnStr, mongodbDatabase,collName,BsonDocument.Parse(replaceFliter));
                 }
                 else
                 {

@@ -4,6 +4,8 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
+
 
 namespace NeoBlockAnalysis
 {
@@ -68,7 +70,7 @@ namespace NeoBlockAnalysis
             {
                 Console.WriteLine("nep5transfer: "+blockindex+"~~~~~~~~~i:"+i);
                 MyJson.JsonNode_Object jo = result[i] as MyJson.JsonNode_Object;
-                mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer", jo.ToString());
+                mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "NEP5transfer",BsonDocument.Parse(jo.ToString()));
                 //对nep5数据进行分析处理
                 HandlerNep5Transfer(jo);
             }
@@ -81,15 +83,15 @@ namespace NeoBlockAnalysis
             string to = jo["to"].ToString();
             string  str_value = jo["value"].ToString();
 
-            decimal value = decimal.Parse(str_value);
+            decimal value = toolHelper.DecimalParse(str_value);
             int blockindex_cur = int.Parse(jo["blockindex"].ToString());
 
             if (!string.IsNullOrEmpty(from))
             {
                 //获取这个资产 from地址的资产
                 var jo_assetfrom = mongoHelper.FindOne(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + from + "\",asset:\"" + asset + "\"}");
-                decimal value_cur = jo_assetfrom!=null ? decimal.Parse(jo_assetfrom["value_cur"].ToString()) : 0;
-                decimal value_pre = jo_assetfrom!=null ? decimal.Parse(jo_assetfrom["value_pre"].ToString()) : 0;
+                decimal value_cur = jo_assetfrom!=null ? toolHelper.DecimalParse(jo_assetfrom["value_cur"].ToString()) : 0;
+                decimal value_pre = jo_assetfrom!=null ? toolHelper.DecimalParse(jo_assetfrom["value_pre"].ToString()) : 0;
 
                 int blockindex_cur_from = jo_assetfrom != null ? int.Parse(jo_assetfrom["blockindex"].ToString()) : blockindex_cur;
 
@@ -125,8 +127,8 @@ namespace NeoBlockAnalysis
             {
                 //获取这个资产 to地址的资产
                 var jo_assetto = mongoHelper.FindOne(Program.mongodbConnStr, Program.mongodbDatabase, "assetrank", "{addr:\"" + to + "\",asset:\"" + asset + "\"}");
-                decimal value_cur = jo_assetto != null ? decimal.Parse(jo_assetto["value_cur"].ToString()) : 0;
-                decimal value_pre = jo_assetto != null ? decimal.Parse(jo_assetto["value_pre"].ToString()) : 0;
+                decimal value_cur = jo_assetto != null ? toolHelper.DecimalParse(jo_assetto["value_cur"].ToString()) : 0;
+                decimal value_pre = jo_assetto != null ? toolHelper.DecimalParse(jo_assetto["value_pre"].ToString()) : 0;
 
                 int blockindex_cur_to = jo_assetto != null ? int.Parse(jo_assetto["blockindex"].ToString()) : blockindex_cur;
 
@@ -162,21 +164,21 @@ namespace NeoBlockAnalysis
 
             //往mongo里address_tx存入相关的地址交易信息
             //存from地址
-            MyJson.JsonNode_Array JAvin = new MyJson.JsonNode_Array();
-            MyJson.JsonNode_Object JOvin = new MyJson.JsonNode_Object();
-            JOvin["n"] = new MyJson.JsonNode_ValueNumber(0);
-            JOvin["asset"] = new MyJson.JsonNode_ValueString(asset);
-            JOvin["value"] = new MyJson.JsonNode_ValueString(value.ToString());
-            JOvin["address"] = new MyJson.JsonNode_ValueString(from);
-            JAvin.Add(JOvin);
+            List<Utxo> list_vin_utxo = new List<Utxo>();
+            Utxo vin = new Utxo();
+            vin.n = 0;
+            vin.asset = asset;
+            vin.value = value;
+            vin.address = from;
+            list_vin_utxo.Add(vin);
 
-            MyJson.JsonNode_Array JAvout = new MyJson.JsonNode_Array();
-            MyJson.JsonNode_Object JOvout = new MyJson.JsonNode_Object();
-            JOvout["n"] = new MyJson.JsonNode_ValueNumber(0);
-            JOvout["asset"] = new MyJson.JsonNode_ValueString(asset);
-            JOvout["value"] = new MyJson.JsonNode_ValueString(value.ToString());
-            JOvout["address"] = new MyJson.JsonNode_ValueString(to);
-            JAvout.Add(JOvout);
+            List<Utxo> list_vout_utxo = new List<Utxo>();
+            Utxo vout = new Utxo();
+            vout.n = 0;
+            vout.asset = asset;
+            vout.value = value;
+            vout.address = to;
+            list_vout_utxo.Add(vout);
 
             var txid = jo["txid"].ToString();
             //获取区块所在时间
@@ -198,32 +200,35 @@ namespace NeoBlockAnalysis
             Detail detail = new Detail();
             var assetInfo = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5asset", "{assetid:\"" + asset + "\"}");
             //from 构造
+            detail.assetId = asset;
             detail.assetName = assetInfo[0].AsDict()["name"].ToString();
             detail.assetDecimals = assetInfo[0].AsDict()["decimals"].ToString();
             detail.assetSymbol = assetInfo[0].AsDict()["symbol"].ToString();
-            detail.value = (0-value).ToString();
-            detail.fromOrTo = "from";
+            detail.value = BsonDecimal128.Create((0-value).ToString());
+            detail.isSender = false;
+            detail.from = new string[] {from };
+            detail.to = new string[] { to };
 
             Address_Tx addressTx = new Address_Tx();
-            addressTx.detail[asset] = detail.toMyJson();
+            addressTx.detail = detail;
             addressTx.addr = from;
             addressTx.txid = txid;
             addressTx.netfee = netfee;
             addressTx.sysfee = sysfee;
-            addressTx.vin = JAvin;
-            addressTx.vout = JAvout;
+            addressTx.vin = list_vin_utxo.ToArray();
+            addressTx.vout = list_vout_utxo.ToArray();
             addressTx.blockindex = blockindex_cur;
             addressTx.blocktime = blocktime;
             addressTx.isNep5 = true;
             addressTx.txType = txType;
 
             MyJson.JsonNode_Object JOvalue = new MyJson.JsonNode_Object();
-            mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx.toMyJson().ToString());
-            detail.value = (0 + value).ToString();
-            detail.fromOrTo = "to";
+            mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx);
+            detail.value = BsonDecimal128.Create((0 + value).ToString());
+            detail.isSender = false;
             addressTx.addr = to;
-            addressTx.detail = detail.toMyJson();
-            mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx.toMyJson().ToString());
+            addressTx.detail = detail;
+            mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", addressTx);
 
         }
     }

@@ -4,6 +4,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Numerics;
 using System.Threading;
+using MongoDB.Bson;
+using System.Globalization;
 
 namespace NeoBlockAnalysis
 {
@@ -17,9 +19,6 @@ namespace NeoBlockAnalysis
                 blockindex = mongoHelper.GetMaxIndex(Program.mongodbConnStr,Program.mongodbDatabase,"address_tx", "blockindex","{\"isNep5\":false}");
                 if (Program.handlerminblockindex != -1)
                 { blockindex = Program.handlerminblockindex; }
-                var maxBlockIndex = 999999999;
-                if (Program.handlermaxblockindex != -1)
-                    maxBlockIndex = Program.handlermaxblockindex;
                 //删除这个高度tx的所有数据
                 var count1 = mongoHelper.GetDataCount(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx");
                 Console.WriteLine("删之前的数据个数："+ count1);
@@ -28,11 +27,6 @@ namespace NeoBlockAnalysis
                 Console.WriteLine("删之后的数据个数：" + count2);
                 while (true)
                 {
-                    if (blockindex >= maxBlockIndex)
-                    {
-                        Console.WriteLine("已经处理到预期高度");
-                        return;
-                    }
                     var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block");
                     if (blockindex < cli_blockindex)//处理的数据要比库中的高度少一 
                     {
@@ -91,8 +85,9 @@ namespace NeoBlockAnalysis
                 address_tx.sysfee = jo_raw["sys_fee"].ToString();
                 address_tx.netfee = jo_raw["net_fee"].ToString();
                 //定义一个输入包含utxo
-                MyJson.JsonNode_Array JAvin_utxo = new MyJson.JsonNode_Array();
-
+                List<Utxo> list_vin_utxo = new List<Utxo>();
+                //定义一个输出入包含utxo
+                List<Utxo> list_vout_utxo = new List<Utxo>();
                 //获取这个tx的vin并根据vin中的txid来获取输入的utxo的信息
                 MyJson.JsonNode_Array JAvin = jo_raw["vin"] as MyJson.JsonNode_Array;
 
@@ -101,6 +96,9 @@ namespace NeoBlockAnalysis
                 if (scripts.Count > 1 && JAvin.Count > 200)
                     return;
 
+                Dictionary<string, Detail> dic_detail = new Dictionary<string, Detail>();
+                List<string> list_fromAddress = new List<string>();
+                List<string> list_toAddress = new List<string>();
 
                 for (var i =0;i<JAvin.Count;i++)
                 {
@@ -113,76 +111,108 @@ namespace NeoBlockAnalysis
                     {
                         int n = int.Parse(jo_vin["vout"].ToString());
                         MyJson.JsonNode_Object joresult_vin = result[0] as MyJson.JsonNode_Object;
-                        MyJson.JsonNode_Object vin = (joresult_vin["vout"] as MyJson.JsonNode_Array)[n] as MyJson.JsonNode_Object;
-                        JAvin_utxo.Add(vin);
-                        if (vin["address"].ToString() == address_tx.addr)
+                        //MyJson.JsonNode_Object vin = (joresult_vin["vout"] as MyJson.JsonNode_Array)[n] as MyJson.JsonNode_Object;
+                        Utxo vin = new Utxo();
+                        vin.n = (uint)joresult_vin["vout"].AsList()[n].AsDict()["n"].AsInt();
+                        vin.asset = joresult_vin["vout"].AsList()[n].AsDict()["asset"].ToString();
+                        vin.value = toolHelper.DecimalParse(joresult_vin["vout"].AsList()[n].AsDict()["value"].ToString());
+                        vin.address = joresult_vin["vout"].AsList()[n].AsDict()["address"].ToString();
+                        list_vin_utxo.Add(vin);
+                        if (vin.address == address_tx.addr)
                         {
                             string value;
-                            if (!address_tx.detail.ContainsKey(vin["asset"].ToString()))
+                            if (!dic_detail.ContainsKey(vin.asset))
                             {
                                 //从asset表中获取这个资产的详情
-                                result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "asset", "{\"id\":\"" + vin["asset"].ToString() + "\"}");
+                                result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "asset", "{\"id\":\"" + vin.asset + "\"}");
                                 MyJson.JsonNode_Object assetInfo = result[0].AsDict();
                                 Detail detail = new Detail();
+                                detail.assetId = vin.asset;
                                 detail.assetType = "UTXO";
                                 detail.assetName = assetInfo["name"].AsList()[0].AsDict()["name"].ToString();
                                 detail.assetSymbol = detail.assetName;
                                 detail.assetDecimals = "";
-                                detail.fromOrTo = "from";
-                                detail.value = "0";
-                                address_tx.detail[vin["asset"].ToString()] = detail.toMyJson();
+                                detail.isSender = true;
+                                detail.value = BsonDecimal128.Create("0");
+                                dic_detail[vin.asset] = detail;
                                 value = "0";
                             }
                             else
                             {
-                                value = address_tx.detail[vin["asset"].ToString()].AsDict()["value"].ToString();
+                                value = dic_detail[vin.asset].value.ToString();
                             }
-                            address_tx.detail[vin["asset"].ToString()].AsDict()["value"] = new MyJson.JsonNode_ValueString((decimal.Parse(value) - decimal.Parse(vin["value"].ToString())).ToString());
+                            dic_detail[vin.asset].value = BsonDecimal128.Create((toolHelper.DecimalParse(value) - toolHelper.DecimalParse(vin.value.ToString())).ToString());
+                        }
+                        else
+                        {
+                            if (!list_fromAddress.Contains(vin.address))
+                                list_fromAddress.Add(vin.address);
                         }
                     }
                 }
 
                 MyJson.JsonNode_Array JAvout_utxo = jo_raw["vout"] as MyJson.JsonNode_Array;
-                foreach (MyJson.JsonNode_Object jo_vout in JAvout_utxo)
+                for (var i = 0; i < JAvout_utxo.Count; i++)
                 {
+                    MyJson.JsonNode_Object jo_vout = JAvout_utxo[i] as MyJson.JsonNode_Object;
+                    Utxo vout = new Utxo();
+                    vout.n = (uint)jo_vout["n"].AsInt();
+                    vout.asset = jo_vout["asset"].ToString();
+                    vout.value = toolHelper.DecimalParse(jo_vout["value"].ToString());
+                    vout.address = jo_vout["address"].ToString();
+                    list_vout_utxo.Add(vout);
+                    var a = BsonDecimal128.Create((decimal)-0.00000001);
                     if (jo_vout["address"].ToString() == address_tx.addr)
                     {
                         string value;
-                        if (!address_tx.detail.ContainsKey(jo_vout["asset"].ToString()))
+                        if (!dic_detail.ContainsKey(jo_vout["asset"].ToString()))
                         {
                             //从asset表中获取这个资产的详情
                             result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "asset", "{\"id\":\"" + jo_vout["asset"].ToString() + "\"}");
                             MyJson.JsonNode_Object assetInfo = result[0].AsDict();
                             Detail detail = new Detail();
+                            detail.assetId = vout.asset;
                             detail.assetType = "UTXO";
                             detail.assetName = assetInfo["name"].AsList()[0].AsDict()["name"].ToString();
                             detail.assetSymbol = detail.assetName;
                             detail.assetDecimals = "";
-                            detail.fromOrTo = "from";
-                            detail.value = "0";
-                            address_tx.detail[jo_vout["asset"].ToString()] = detail.toMyJson();
+                            detail.isSender = true;
+                            detail.value = BsonDecimal128.Create("0");
+                            dic_detail[jo_vout["asset"].ToString()] = detail;
                             value = "0";
                         }
                         else
                         {
-                            value = address_tx.detail[jo_vout["asset"].ToString()].AsDict()["value"].ToString();
+                            value = dic_detail[jo_vout["asset"].ToString()].value.ToString();
                         }
-                        var r = decimal.Parse(value) + decimal.Parse(jo_vout["value"].ToString());
+                        var r = toolHelper.DecimalParse(value) + vout.value;
                         if (r > 0)
-                            address_tx.detail[jo_vout["asset"].ToString()].AsDict()["fromOrTo"] = new MyJson.JsonNode_ValueString("to");
+                            dic_detail[jo_vout["asset"].ToString()].isSender = false;
                         else
-                            address_tx.detail[jo_vout["asset"].ToString()].AsDict()["fromOrTo"] = new MyJson.JsonNode_ValueString("from");
-                        address_tx.detail[jo_vout["asset"].ToString()].AsDict()["value"] = new MyJson.JsonNode_ValueString(r.ToString());
+                            dic_detail[jo_vout["asset"].ToString()].isSender = false;
+                        dic_detail[jo_vout["asset"].ToString()].value = BsonDecimal128.Create(r.ToString());
 
+                    }
+                    else
+                    {
+                        if (!list_toAddress.Contains(jo_vout["address"].ToString()))
+                            list_toAddress.Add(jo_vout["address"].ToString());
                     }
                 }
                 //如果这个地址在这个交易里面没有资产变化就不入库
-                if (address_tx.detail.Keys.Count == 0)
+                if (dic_detail.Count == 0)
                     return;
-                address_tx.vin = JAvin_utxo;
-                address_tx.vout = JAvout_utxo;
+                address_tx.vin = list_vin_utxo.ToArray();
+                address_tx.vout = list_vout_utxo.ToArray();
                 address_tx.isNep5 = false;
-                mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", address_tx.toMyJson().ToString());
+                List<string> keys = new List<string>(dic_detail.Keys);
+                for (var i = 0; i < keys.Count; i++)
+                {
+                    dic_detail[keys[i]].from = list_fromAddress.ToArray();
+                    dic_detail[keys[i]].to = list_toAddress.ToArray();
+                    address_tx.detail = dic_detail[keys[i]];
+                    mongoHelper.InsetOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", address_tx);
+                }
             }
         }
         bool isFirstHandlerBlockindex = true;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MongoDB.Bson;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -13,13 +14,16 @@ namespace NeoBlockAnalysis
 
     class Detail
     {
+        public string assetId;
         public string assetType;
         public string assetName;
         public string assetSymbol;
         public string assetDecimals;
-        public string value;
-        public string fromOrTo;
-
+        public BsonDecimal128 value;
+        public bool isSender;
+        public string[] from;
+        public string[] to;
+        /*
         public MyJson.JsonNode_Object toMyJson()
         {
             MyJson.JsonNode_Object jo = new MyJson.JsonNode_Object();
@@ -28,9 +32,10 @@ namespace NeoBlockAnalysis
             jo["assetSymbol"] = new MyJson.JsonNode_ValueString(assetSymbol);
             jo["assetDecimals"] = new MyJson.JsonNode_ValueString(assetDecimals);
             jo["value"] = new MyJson.JsonNode_ValueString(value);
-            jo["fromOrTo"] = new MyJson.JsonNode_ValueString(fromOrTo);
+            jo["isSender"] = new MyJson.JsonNode_ValueNumber(isSender);
             return jo;
         }
+        */
     }
     class Address_Tx
     {
@@ -38,9 +43,9 @@ namespace NeoBlockAnalysis
         public string txid;
         public string txType;
         public bool isNep5;
-        public MyJson.JsonNode_Array vin;
-        public MyJson.JsonNode_Array vout;
-        public MyJson.JsonNode_Object detail = new MyJson.JsonNode_Object();
+        public Utxo[] vin;
+        public Utxo[] vout;
+        public Detail detail;
         public string netfee;
         public string sysfee;
         public int blockindex;
@@ -50,6 +55,7 @@ namespace NeoBlockAnalysis
         {
 
         }
+        /*
         public MyJson.JsonNode_Object toMyJson()
         {
             MyJson.JsonNode_Object jo = new MyJson.JsonNode_Object();
@@ -67,5 +73,13 @@ namespace NeoBlockAnalysis
 
             return jo;
         }
+        */
+    }
+    class Utxo
+    {
+        public uint n;
+        public string asset;
+        public decimal value;
+        public string address;
     }
 }

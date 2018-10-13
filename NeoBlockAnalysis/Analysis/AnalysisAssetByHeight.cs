@@ -45,12 +45,11 @@ namespace NeoBlockAnalysis
                     //获取这个address的所有的utxo
                     var findFliter = "{addr:\"" + address+"\",asset:\""+assetid + "\"}";
                     MyJson.JsonNode_Array utxos = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "utxo", findFliter);
-                    Dictionary<string, decimal> balance = new Dictionary<string, decimal>();
                     decimal value = 0;
                     foreach (MyJson.JsonNode_Object j in utxos)
                     {
                         if(int.Parse(j["createHeight"].ToString())<= height && (int.Parse(j["useHeight"].ToString())>height|| int.Parse(j["useHeight"].ToString())==-1))
-                            value += decimal.Parse(j["value"].ToString());
+                            value += toolHelper.DecimalParse(j["value"].ToString());
                     }
                     if (value > 0)
                     {
