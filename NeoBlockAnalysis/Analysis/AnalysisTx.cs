@@ -145,9 +145,10 @@ namespace NeoBlockAnalysis
                         }
                         else
                         {
-                            if (!list_fromAddress.Contains(vin.address))
-                                list_fromAddress.Add(vin.address);
+
                         }
+                        if (!list_fromAddress.Contains(vin.address))
+                            list_fromAddress.Add(vin.address);
                     }
                 }
 
@@ -161,7 +162,6 @@ namespace NeoBlockAnalysis
                     vout.value = toolHelper.DecimalParse(jo_vout["value"].ToString());
                     vout.address = jo_vout["address"].ToString();
                     list_vout_utxo.Add(vout);
-                    var a = BsonDecimal128.Create((decimal)-0.00000001);
                     if (jo_vout["address"].ToString() == address_tx.addr)
                     {
                         string value;
