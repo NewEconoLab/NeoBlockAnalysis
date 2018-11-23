@@ -85,6 +85,16 @@ namespace NeoBlockAnalysis
                 }
                 else if (input == "3")
                 {
+                    new AnalysisAssetRank().StartTask();
+
+                    if (isDoNep5 == 1)
+                        new AnalysisNep5Transfer().StartTask();
+                    if (isDoTx == 1)
+                        new AnalysisTx().StartTask();
+                    break;
+                }
+                else if (input == "4")
+                {
                     Console.WriteLine("输入获取的高度");
                     string height = Console.ReadLine();
                     Console.WriteLine("你输入的高度：" + height);
@@ -106,7 +116,7 @@ namespace NeoBlockAnalysis
 
         static void ShowMenu2()
         {
-            Console.WriteLine("输入1开始执行分析工程；输入2执行入库工程;输入3获取某个高度的neo快照;输入4开始发币;5测试");
+            Console.WriteLine("输入1开始执行分析工程；输入2执行入库工程;输入3全部执行;输入4获取某个高度的neo快照");
         }
     }
 }

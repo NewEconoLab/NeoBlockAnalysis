@@ -21,10 +21,8 @@ namespace NeoBlockAnalysis
                 { blockindex = Program.handlerminblockindex; }
                 //删除这个高度tx的所有数据
                 var count1 = mongoHelper.GetDataCount(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx");
-                Console.WriteLine("删之前的数据个数："+ count1);
                 mongoHelper.DelData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"isNep5\":false,\"blockindex\":"+blockindex+"}");
                 var count2 = mongoHelper.GetDataCount(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx");
-                Console.WriteLine("删之后的数据个数：" + count2);
                 while (true)
                 {
                     var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block");
@@ -46,14 +44,11 @@ namespace NeoBlockAnalysis
 
         void StorageTx(Int64 blockindex)
         {
-            Console.WriteLine("address_tx:" + blockindex);
-
             var findFliter = "{blockindex:" + blockindex + "}";
             MyJson.JsonNode_Array result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "address_tx", findFliter);
             isFirstHandlerBlockindex = true;
             for (var i = 0; i < result.Count; i++)
             {
-                Console.WriteLine("blockindex:"+ blockindex+"~~~~~~~~~~~总数:"+result.Count+"!!!!!!!i:"+i);
                 HandlerAddressTx(result[i] as MyJson.JsonNode_Object);
             }
         }
@@ -102,7 +97,6 @@ namespace NeoBlockAnalysis
 
                 for (var i =0;i<JAvin.Count;i++)
                 {
-                    Console.WriteLine("blockinde:"+ address_tx.blockindex + "   vin:"+i);
                     MyJson.JsonNode_Object jo_vin = JAvin[i] as MyJson.JsonNode_Object;
                     findFliter = "{txid:'" + jo_vin["txid"].ToString() + "'}";
                     result = mongoHelper.GetData(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "tx", findFliter);
