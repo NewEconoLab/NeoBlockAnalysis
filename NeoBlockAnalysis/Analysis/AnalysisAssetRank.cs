@@ -14,8 +14,9 @@ namespace NeoBlockAnalysis
 
                 while (true)
                 {
+                    Thread.Sleep(24 * 60 * 60 * 1000);
                     StartAnalysis();
-                    Thread.Sleep(Program.sleepTime);
+                    //Thread.Sleep(Program.sleepTime);
                 }
             });
             task_StoragTx.Start();
