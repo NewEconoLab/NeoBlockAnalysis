@@ -143,10 +143,11 @@ namespace NeoBlockAnalysis
             var client = new MongoClient(mongodbConnStr);
             var database = client.GetDatabase(mongodbDatabase);
             var collection = database.GetCollection<BsonDocument>(coll);
-            var sortBson = BsonDocument.Parse("{index:-1}");
-            var query = collection.Find(new BsonDocument()).Sort(sortBson).Limit(1).ToList();
+            //var sortBson = BsonDocument.Parse("{index:-1}");
+            //var query = collection.Find(new BsonDocument()).Sort(sortBson).Limit(1).ToList();
+            var query = collection.Find(BsonDocument.Parse("{counter:\"block\"}")).Limit(1).ToList();
             if (query.Count > 0)
-            { return (int)query[0]["index"]; }
+            { return (int)query[0]["lastBlockindex"]; }
             return 0;
         }
 

@@ -25,7 +25,7 @@ namespace NeoBlockAnalysis
                 var count2 = mongoHelper.GetDataCount(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx");
                 while (true)
                 {
-                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block");
+                    var cli_blockindex = mongoHelper.Getblockheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter");
                     if (blockindex < cli_blockindex)//处理的数据要比库中的高度少一 
                     {
                         StorageTx(blockindex);
