@@ -35,7 +35,7 @@ namespace NeoBlockAnalysis
                             //Console.WriteLine("已经处理到预期高度");
                             return;
                         }
-                        var cli_blockindex = mongoHelper.GetNEP5transferheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5transfer");
+                        var cli_blockindex = mongoHelper.GetNEP5transferheight(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter");
                         if (blockindex < cli_blockindex)
                         {
                             StorageNep5Transfer(blockindex);
@@ -51,11 +51,6 @@ namespace NeoBlockAnalysis
 
             });
             task_StorageNep5Transfer.Start();
-        }
-
-        public void Start(int blockindex)
-        {
-            StorageNep5Transfer(blockindex);
         }
 
         bool isFirstHandlerBlockindex = true;
