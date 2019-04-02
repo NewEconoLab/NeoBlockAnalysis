@@ -1,11 +1,9 @@
 ﻿using NEL.Simple.SDK.Helper;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Numerics;
+using MongoDB.Bson;
 
 namespace NeoBlockAnalysis
 {
@@ -37,8 +35,8 @@ namespace NeoBlockAnalysis
             {
                 Thread.Sleep(Program.sleepTime);
                 //handlerHeight不能超过block数据库中的nep5的高度
-                var block_utxo_height = (int)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", "{counter:\"NEP5\"}")[0]["lastBlockindex"];
-                if (handlerHeight >= block_utxo_height)
+                var block_nep5_height = (int)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", "{counter:\"NEP5\"}")[0]["lastBlockindex"];
+                if (handlerHeight >= block_nep5_height)
                     continue;
                 handlerHeight++;
                 query = MongoDBHelper.Get(Program.neo_mongodbConnStr,Program.neo_mongodbDatabase, "Nep5State","{LastUpdatedBlock:"+handlerHeight+"}");
@@ -57,15 +55,15 @@ namespace NeoBlockAnalysis
                     }
                     int decimals = (int)assetInfo[0]["decimals"];
                     //除以精度
-                    var balance = BigInteger.Parse((string)query[i]["Balance"]) / BigInteger.Parse(Math.Pow(10,decimals).ToString());
+                    var balance = decimal.Parse((string)query[i]["Balance"]) / decimal.Parse(Math.Pow(10,decimals).ToString());
 
-                    var addressAssetBalance = new AddressAssetBalance() { Address = address,AssetHash = assetid,Balance = int.Parse(balance.ToString()),LastUpdatedBlock = handlerHeight};
-                    var addressAssetBalacnes = MongoDBHelper.Get<AddressAssetBalance>(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}");
+                    var addressAssetBalance = new AddressAssetBalance() { Address = address,AssetHash = assetid,Balance = BsonDecimal128.Create(balance.ToString()),LastUpdatedBlock = handlerHeight};
+                    var addressAssetBalacnes = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}");
                     if (addressAssetBalacnes.Count == 1)
                     {
-                        if (addressAssetBalacnes[0].LastUpdatedBlock == handlerHeight)
+                        if ((int)addressAssetBalacnes[0]["LastUpdatedBlock"] == handlerHeight)
                             continue;
-                        MongoDBHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}", MongoDB.Bson.BsonDocument.Parse(addressAssetBalance.ToJson().ToString()));
+                        MongoDBHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}", addressAssetBalance);
                     }
                     else if (addressAssetBalacnes.Count == 0)
                         MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance",addressAssetBalance);
@@ -103,11 +101,11 @@ namespace NeoBlockAnalysis
                 {
                     string address = (string)query[i]["addr"];
                     string assetid = (string)query[i]["asset"];
-                    int value = int.Parse((string)query[i]["value"]);
+                    BsonDecimal128 value = BsonDecimal128.Create((string)query[i]["value"]);
                     string key = address + assetid;
                     if (dic.ContainsKey(key))
                     {
-                        dic[key].Balance += value;
+                        dic[key].Balance = BsonDecimal128.Create(dic[key].Balance.ToDecimal() + value.ToDecimal());
                     }
                     else
                     {
@@ -120,15 +118,15 @@ namespace NeoBlockAnalysis
                 {
                     string address = (string)query[i]["addr"];
                     string assetid = (string)query[i]["asset"];
-                    int value = int.Parse((string)query[i]["value"]);
+                    BsonDecimal128 value = BsonDecimal128.Create((string)query[i]["value"]);
                     string key = address + assetid;
                     if (dic.ContainsKey(key))
                     {
-                        dic[key].Balance -= value;
+                        dic[key].Balance = BsonDecimal128.Create(dic[key].Balance.ToDecimal() - value.ToDecimal());
                     }
                     else
                     {
-                        dic[key] = new AddressAssetBalance() { Address = address, AssetHash = assetid, Balance = -value , LastUpdatedBlock = handlerHeight};
+                        dic[key] = new AddressAssetBalance() { Address = address, AssetHash = assetid, Balance = BsonDecimal128.Create((0 - value.ToDecimal()).ToString()), LastUpdatedBlock = handlerHeight};
                     }
                 }
                 //上面计算好了  某个高度  某些地址资产的变动  现在开始并入
@@ -136,14 +134,14 @@ namespace NeoBlockAnalysis
                 {
                     var address = dic[key].Address;
                     var assetid = dic[key].AssetHash;
-                    var addressAssetBalacnes = MongoDBHelper.Get<AddressAssetBalance>(Program.mongodbConnStr,Program.mongodbDatabase, "address_assetid_balance","{Address:\""+ address + "\",AssetHash:\""+ assetid + "\"}");
+                    var addressAssetBalacnes = MongoDBHelper.Get(Program.mongodbConnStr,Program.mongodbDatabase, "address_assetid_balance","{Address:\""+ address + "\",AssetHash:\""+ assetid + "\"}");
                     if (addressAssetBalacnes.Count == 1)
                     {
-                        if (addressAssetBalacnes[0].LastUpdatedBlock == handlerHeight)
+                        if ((int)addressAssetBalacnes[0]["LastUpdatedBlock"] == handlerHeight)
                             continue;
 
-                        dic[key].Balance = addressAssetBalacnes[0].Balance + dic[key].Balance;
-                        MongoDBHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}", MongoDB.Bson.BsonDocument.Parse(dic[key].ToJson().ToString()));
+                        dic[key].Balance = BsonDecimal128.Create(decimal.Parse(addressAssetBalacnes[0]["Balance"]["$numberDecimal"].ToString()) + dic[key].Balance.ToDecimal());
+                        MongoDBHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}", dic[key]);
                     }
                     else if (addressAssetBalacnes.Count == 0)
                         MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", dic[key]);
@@ -162,20 +160,9 @@ namespace NeoBlockAnalysis
 
     public class AddressAssetBalance
     {
-        public MongoDB.Bson.ObjectId _id;
         public string Address;
         public string AssetHash;
-        public int Balance;
+        public BsonDecimal128 Balance;
         public int LastUpdatedBlock;
-
-        public JObject ToJson()
-        {
-            var jo = new JObject();
-            jo.Add("Address", Address);
-            jo.Add("AssetHash", AssetHash);
-            jo.Add("Balance", Balance);
-            jo.Add("LastUpdatedBlock", LastUpdatedBlock);
-            return jo;
-        }
     }
 }
