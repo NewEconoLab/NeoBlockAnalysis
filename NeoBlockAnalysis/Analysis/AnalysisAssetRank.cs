@@ -13,24 +13,16 @@ namespace NeoBlockAnalysis
     {
         public void StartTask()
         {
-            Task task_StoragTx = new Task(() => {
-                StartAnalysis();
+            Task task_HandlerUtxo = new Task(() => {
+                HandlerUtxo();
             });
-            task_StoragTx.Start();
+            Task task_HandlerNep5 = new Task(() => {
+                HandlerNep5();
+            });
+            task_HandlerUtxo.Start();
+            task_HandlerNep5.Start();
         }
 
-        private void StartAnalysis()
-        {
-            try
-            {
-                HandlerUtxo();
-                HandlerNep5();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        }
 
         private void HandlerNep5()
         {
