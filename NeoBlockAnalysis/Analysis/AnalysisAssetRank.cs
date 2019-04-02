@@ -43,7 +43,7 @@ namespace NeoBlockAnalysis
             Dictionary<string, AddressAssetBalance> dic = new Dictionary<string, AddressAssetBalance>();
             while (true)
             {
-                Task.Delay(50);
+                Thread.Sleep(Program.sleepTime);
                 //handlerHeight不能超过block数据库中的nep5的高度
                 var block_utxo_height = (int)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", "{counter:\"NEP5\"}")[0]["lastBlockindex"];
                 if (handlerHeight >= block_utxo_height)
