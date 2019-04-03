@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using System.Numerics;
 
 namespace NeoBlockAnalysis
 {
@@ -54,8 +55,13 @@ namespace NeoBlockAnalysis
                         goto c;
                     }
                     int decimals = (int)assetInfo[0]["decimals"];
+
+                    //排除奇怪的资产
+                    if (decimals == 0)
+                        continue;
+
                     //除以精度
-                    var balance = decimal.Parse((string)query[i]["Balance"]) / decimal.Parse(Math.Pow(10,decimals).ToString());
+                    var balance = BigInteger.Parse((string)query[i]["Balance"]) / BigInteger.Parse(Math.Pow(10,decimals).ToString());
 
                     var addressAssetBalance = new AddressAssetBalance() { Address = address,AssetHash = assetid,Balance = BsonDecimal128.Create(balance.ToString()),LastUpdatedBlock = handlerHeight};
                     var addressAssetBalacnes = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}");
@@ -140,7 +146,7 @@ namespace NeoBlockAnalysis
                         if ((int)addressAssetBalacnes[0]["LastUpdatedBlock"] == handlerHeight)
                             continue;
 
-                        dic[key].Balance = BsonDecimal128.Create(decimal.Parse(addressAssetBalacnes[0]["Balance"]["$numberDecimal"].ToString()) + dic[key].Balance.ToDecimal());
+                        dic[key].Balance = BsonDecimal128.Create(decimal.Parse(addressAssetBalacnes[0]["Balance"]["$numberDecimal"].ToString(), System.Globalization.NumberStyles.Float) + dic[key].Balance.ToDecimal());
                         MongoDBHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}", dic[key]);
                     }
                     else if (addressAssetBalacnes.Count == 0)
