@@ -48,13 +48,15 @@ namespace NeoBlockAnalysis
 
                     //获取这个资产的精度
                     var assetInfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5asset", "{assetid:\"" + assetid + "\"}");
+                    int decimals = 8;//大部分的nep5资产都是8
                     if (assetInfo.Count == 0)
-                    {
-                        Console.WriteLine("没有获取到"+ assetid+"的资产信息");
-                        handlerHeight--;
-                        goto c;
+                    {//输出报错
+                        Console.WriteLine("没有获取到" + assetid + "的资产信息");
                     }
-                    int decimals = (int)assetInfo[0]["decimals"];
+                    else
+                    {
+                        decimals = (int)assetInfo[0]["decimals"];
+                    }
 
                     //排除奇怪的资产
                     if (decimals == 0)
@@ -77,7 +79,6 @@ namespace NeoBlockAnalysis
                         throw new Exception("完蛋");
                 }
                 MongoDBHelper.ReplaceData(Program.mongodbConnStr, Program.mongodbDatabase, "system_counter", "{\"counter\":\"nep5Balance\"}", MongoDB.Bson.BsonDocument.Parse("{counter:\"nep5Balance\",lastBlockindex:" + handlerHeight + "}"));
-                c:;
             }
         }
 
