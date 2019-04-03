@@ -45,7 +45,7 @@ namespace NeoBlockAnalysis
                 {
                     var address = (string)query[i]["Address"];
                     var assetid = (string)query[i]["AssetHash"];
-
+                    Console.WriteLine(i+"   "+address);
                     //获取这个资产的精度
                     var assetInfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5asset", "{assetid:\"" + assetid + "\"}");
                     int decimals = 8;//大部分的nep5资产都是8
@@ -63,7 +63,7 @@ namespace NeoBlockAnalysis
                         continue;
 
                     //除以精度
-                    var balance = BigInteger.Parse((string)query[i]["Balance"]) / BigInteger.Parse(Math.Pow(10,decimals).ToString());
+                    var balance = decimal.Parse((string)query[i]["Balance"]) / decimal.Parse(Math.Pow(10,decimals).ToString());
 
                     var addressAssetBalance = new AddressAssetBalance() { Address = address,AssetHash = assetid,Balance = BsonDecimal128.Create(balance.ToString()),LastUpdatedBlock = handlerHeight};
                     var addressAssetBalacnes = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}");
