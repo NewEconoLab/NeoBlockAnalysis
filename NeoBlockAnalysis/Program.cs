@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
+using NEL.Simple.SDK.Helper;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Linq;
 using System.Threading;
 
 namespace NeoBlockAnalysis
@@ -11,6 +14,7 @@ namespace NeoBlockAnalysis
         public static string neo_mongodbConnStr = string.Empty;
         public static string neo_mongodbDatabase = string.Empty;
         public static string NeoCliJsonRPCUrl = string.Empty;
+        public static string[] MongoDbIndex = new string[] { };
         public static int sleepTime = 0;
         public static int serverType = 0;
         static void Main(string[] args)
@@ -32,6 +36,7 @@ namespace NeoBlockAnalysis
                     neo_mongodbDatabase = config["neo_mongodbDatabase_testnet"];
                     NeoCliJsonRPCUrl = config["NeoCliJsonRPCUrl_testnet"];
                     sleepTime = int.Parse(config["sleepTime"]);
+                    MongoDbIndex = config.GetSection("MongoDbIndexs").GetChildren().Select(p => p.Value).ToArray();
                     serverType = 1;
                     break;
                 }
@@ -43,8 +48,18 @@ namespace NeoBlockAnalysis
                     neo_mongodbDatabase = config["neo_mongodbDatabase_mainnet"];
                     NeoCliJsonRPCUrl = config["NeoCliJsonRPCUrl_mainnet"];
                     sleepTime = int.Parse(config["sleepTime"]);
+                    MongoDbIndex = config.GetSection("MongoDbIndexs").GetChildren().Select(p => p.Value).ToArray();
                     serverType = 2;
                     break;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(mongodbConnStr) && !string.IsNullOrEmpty(mongodbDatabase))
+            {
+                //创建索引
+                for (var i = 0; i < MongoDbIndex.Length; i++)
+                {
+                    SetMongoDbIndex(MongoDbIndex[i]);
                 }
             }
 
@@ -55,6 +70,22 @@ namespace NeoBlockAnalysis
             while (true)
             {
                 Thread.Sleep(100);
+            }
+        }
+
+        public static void SetMongoDbIndex(string mongoDbIndex)
+        {
+            JObject joIndex = JObject.Parse(mongoDbIndex);
+            string collName = (string)joIndex["collName"];
+            JArray indexs = (JArray)joIndex["indexs"];
+            for (var i = 0; i < indexs.Count; i++)
+            {
+                string indexName = (string)indexs[i]["indexName"];
+                string indexDefinition = indexs[i]["indexDefinition"].ToString();
+                bool isUnique = false;
+                if (indexs[i]["isUnique"] != null)
+                    isUnique = (bool)indexs[i]["isUnique"];
+                MongoDBHelper.CreateIndex(mongodbConnStr, mongodbDatabase, collName, indexDefinition, indexName, isUnique);
             }
         }
 

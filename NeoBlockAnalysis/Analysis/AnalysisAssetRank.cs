@@ -45,7 +45,6 @@ namespace NeoBlockAnalysis
                 {
                     var address = (string)query[i]["Address"];
                     var assetid = (string)query[i]["AssetHash"];
-                    Console.WriteLine(i+"   "+address);
                     //获取这个资产的精度
                     var assetInfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "NEP5asset", "{assetid:\"" + assetid + "\"}");
                     int decimals = 8;//大部分的nep5资产都是8
