@@ -15,7 +15,7 @@ namespace NeoBlockAnalysis
             Task task_StoragTx = new Task(() => {
                 int blockindex = 0;
                 //先获取tx已经获取到的高度
-                JArray query = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", 0, 1, "{\"isNep5\":false}", "{\"blockindex\":-1}");
+                JArray query = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase,"address_tx", 0, 1, "{\"isNep5\":false}", "{\"blockindex\":-1}");
                 if (query.Count > 0)
                     blockindex = (int)query[0]["blockindex"];
                 //删除这个高度tx的所有数据
