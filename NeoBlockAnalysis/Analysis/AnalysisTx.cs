@@ -85,7 +85,7 @@ namespace NeoBlockAnalysis
 
 
                 //过滤一些疑似交易所的复杂构造
-                if (scripts.Count > 1 && JAvin.Count > 200)
+                if (scripts.Count > 1 && JAvin.Count > 100)
                     return;
 
                 Dictionary<string, Detail> dic_detail = new Dictionary<string, Detail>();
@@ -102,7 +102,6 @@ namespace NeoBlockAnalysis
                     {
                         int n = int.Parse(jo_vin["vout"].ToString());
                         JObject joresult_vin = result[0] as JObject;
-                        //MyJson.JsonNode_Object vin = (joresult_vin["vout"] as MyJson.JsonNode_Array)[n] as MyJson.JsonNode_Object;
                         Utxo vin = new Utxo();
                         vin.n = (uint)joresult_vin["vout"][n]["n"];
                         vin.asset = (string)joresult_vin["vout"][n]["asset"];
@@ -116,6 +115,8 @@ namespace NeoBlockAnalysis
                             {
                                 //从asset表中获取这个资产的详情
                                 result = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "asset", "{\"id\":\"" + vin.asset + "\"}");
+                                if (result.Count == 0)
+                                    continue;
                                 JObject assetInfo = result[0] as JObject;
                                 Detail detail = new Detail();
                                 detail.assetId = vin.asset;
@@ -160,6 +161,8 @@ namespace NeoBlockAnalysis
                         {
                             //从asset表中获取这个资产的详情
                             result = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "asset", "{\"id\":\"" + jo_vout["asset"].ToString() + "\"}");
+                            if (result.Count == 0)
+                                continue;
                             JObject assetInfo = result[0] as JObject;
                             Detail detail = new Detail();
                             detail.assetId = vout.asset;
