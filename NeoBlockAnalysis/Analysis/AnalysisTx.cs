@@ -13,22 +13,29 @@ namespace NeoBlockAnalysis
         public void StartTask()
         {
             Task task_StoragTx = new Task(() => {
-                int blockindex = 0;
-                //先获取tx已经获取到的高度
-                JArray query = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase,"address_tx", 0, 1, "{\"isNep5\":false}", "{\"blockindex\":-1}");
-                if (query.Count > 0)
-                    blockindex = (int)query[0]["blockindex"];
-                //删除这个高度tx的所有数据
-                MongoDBHelper.DeleteData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"isNep5\":false,\"blockindex\":"+blockindex+"}");
-                while (true)
+                try
                 {
-                    var cli_blockindex = (UInt32)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter",0,1, "{counter:\"block\"}")[0]["lastBlockindex"];
-                    if (blockindex <= cli_blockindex)
+                    int blockindex = 0;
+                    //先获取tx已经获取到的高度
+                    JArray query = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", 0, 1, "{\"isNep5\":false}", "{\"blockindex\":-1}");
+                    if (query.Count > 0)
+                        blockindex = (int)query[0]["blockindex"];
+                    //删除这个高度tx的所有数据
+                    MongoDBHelper.DeleteData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"isNep5\":false,\"blockindex\":" + blockindex + "}");
+                    while (true)
                     {
-                        StorageTx(blockindex);
-                        blockindex++;
+                        var cli_blockindex = (UInt32)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", 0, 1, "{counter:\"block\"}")[0]["lastBlockindex"];
+                        if (blockindex <= cli_blockindex)
+                        {
+                            StorageTx(blockindex);
+                            blockindex++;
+                        }
+                        Thread.Sleep(Program.sleepTime);
                     }
-                    Thread.Sleep(Program.sleepTime);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
                 }
             });
             task_StoragTx.Start();
