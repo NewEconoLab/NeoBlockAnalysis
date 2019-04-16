@@ -53,6 +53,7 @@ namespace NeoBlockAnalysis
 
             for (var i = 0; i < result.Count; i++)
             {
+                Console.WriteLine("AnalysisTx:"+i+"-"+result.Count);
                 HandlerAddressTx(result[i] as JObject);
             }
         }
