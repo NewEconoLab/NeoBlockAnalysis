@@ -24,8 +24,8 @@ namespace NeoBlockAnalysis
                     MongoDBHelper.DeleteData(Program.mongodbConnStr, Program.mongodbDatabase, "address_tx", "{\"isNep5\":false,\"blockindex\":" + blockindex + "}");
                     while (true)
                     {
-                        var cli_blockindex = (UInt32)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", 0, 1, "{counter:\"block\"}")[0]["lastBlockindex"];
-                        if (blockindex <= cli_blockindex)
+                        var cli_TxIndex = (UInt32)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", 0, 1, "{counter:\"tx\"}")[0]["lastBlockindex"];
+                        if (blockindex <= cli_TxIndex)
                         {
                             StorageTx(blockindex);
                             blockindex++;
@@ -48,13 +48,31 @@ namespace NeoBlockAnalysis
 
         void StorageTx(Int64 blockindex)
         {
-            var findFliter = "{blockindex:" + blockindex + "}";
-            JArray result = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "address_tx", findFliter);
-
+            var findFliter = "{useHeight:" + blockindex + "}";
+            JArray result = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "utxo", findFliter);
+            Dictionary<string, JObject> dic = new Dictionary<string, JObject>();
             for (var i = 0; i < result.Count; i++)
             {
-                Console.WriteLine("AnalysisTx:"+i+"-"+result.Count);
-                HandlerAddressTx(result[i] as JObject);
+                var key = result[i]["addr"].ToString() + result[i]["used"].ToString() + result[i]["useHeight"].ToString();
+                if (dic.ContainsKey(key))
+                    continue;
+                dic.Add(key,new JObject() { { "addr", result[i]["addr"].ToString() }, { "blockindex", result[i]["useHeight"].ToString() }, { "txid", result[i]["used"].ToString() } });
+            }
+
+            findFliter = "{createHeight:" + blockindex + "}";
+            result = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "utxo", findFliter);
+            for (var i = 0; i < result.Count; i++)
+            {
+                var key = result[i]["addr"].ToString() + result[i]["txid"].ToString() + result[i]["createHeight"].ToString();
+                if (dic.ContainsKey(key))
+                    continue;
+                dic.Add(key, new JObject() { { "addr", result[i]["addr"].ToString() }, { "blockindex", result[i]["createHeight"].ToString() }, { "txid", result[i]["txid"].ToString() } });
+            }
+
+
+            foreach (var k in dic.Keys)
+            {
+                HandlerAddressTx(dic[k] as JObject);
             }
         }
 
