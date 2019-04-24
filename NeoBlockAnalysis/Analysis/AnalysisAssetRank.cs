@@ -49,9 +49,9 @@ namespace NeoBlockAnalysis
             while (true)
             {
                 Thread.Sleep(Program.sleepTime);
-                //handlerHeight不能超过block数据库中的nep5的高度
-                var block_nep5_height = (int)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", "{counter:\"NEP5\"}")[0]["lastBlockindex"];
-                if (handlerHeight >= block_nep5_height)
+                //handlerHeight不能超过block数据库中的nep5state的高度
+                var block_nep5_height = (int)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "Nep5State",0,1, "{}", "{LastUpdatedBlock:-1}")[0]["LastUpdatedBlock"];
+                if (handlerHeight >= block_nep5_height - 1)
                     continue;
                 handlerHeight++;
                 query = MongoDBHelper.Get(Program.neo_mongodbConnStr,Program.neo_mongodbDatabase, "Nep5State","{LastUpdatedBlock:"+handlerHeight+"}");
