@@ -68,8 +68,8 @@ namespace NeoBlockAnalysis
                             //查询这个交易的发起人,用tx中的scripts中的verification来获得
                             var txinfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "tx",0,1, "{\"txid\":\""+ txid + "\"}", "{}")[0];
                             var scripts = txinfo["scripts"] as JArray;
-                            var sys_fee = txinfo["sys_fee"] as JArray;
-                            var net_fee = txinfo["net_fee"] as JArray;
+                            var sys_fee = (string)txinfo["sys_fee"];
+                            var net_fee = (string)txinfo["net_fee"];
                             var vout = txinfo["vout"] as JArray;
                             var blockindex = (uint)txinfo["blockindex"];
                             decimal neoAmount = 0;
