@@ -14,6 +14,7 @@ namespace NeoBlockAnalysis
         public static string neo_mongodbConnStr = string.Empty;
         public static string neo_mongodbDatabase = string.Empty;
         public static string NeoCliJsonRPCUrl = string.Empty;
+        public static string DoDumpInfo = string.Empty;
         public static string[] MongoDbIndex = new string[] { };
         public static int sleepTime = 0;
         public static int serverType = 0;
@@ -36,6 +37,7 @@ namespace NeoBlockAnalysis
                     neo_mongodbConnStr = config["neo_mongodbConnStr_testnet"];
                     neo_mongodbDatabase = config["neo_mongodbDatabase_testnet"];
                     NeoCliJsonRPCUrl = config["NeoCliJsonRPCUrl_testnet"];
+                    DoDumpInfo = config["DoDumpInfo"];
                     sleepTime = int.Parse(config["sleepTime"]);
                     MongoDbIndex = config.GetSection("MongoDbIndexs").GetChildren().Select(p => p.Value).ToArray();
                     serverType = 1;
@@ -48,6 +50,7 @@ namespace NeoBlockAnalysis
                     neo_mongodbConnStr = config["neo_mongodbConnStr_mainnet"];
                     neo_mongodbDatabase = config["neo_mongodbDatabase_mainnet"];
                     NeoCliJsonRPCUrl = config["NeoCliJsonRPCUrl_mainnet"];
+                    DoDumpInfo = config["DoDumpInfo"];
                     sleepTime = int.Parse(config["sleepTime"]);
                     MongoDbIndex = config.GetSection("MongoDbIndexs").GetChildren().Select(p => p.Value).ToArray();
                     serverType = 2;
@@ -63,7 +66,10 @@ namespace NeoBlockAnalysis
                     SetMongoDbIndex(MongoDbIndex[i]);
                 }
             }
-            new AnalysisDumpInfos().StartTask();
+            if (DoDumpInfo == "1")
+            {
+                new AnalysisDumpInfos().StartTask();
+            }
             new AnalysisAssetRank().StartTask();
             new AnalysisTx().StartTask();
             new AnalysisNep5Transfer().StartTask();
