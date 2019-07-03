@@ -69,6 +69,7 @@ namespace NeoBlockAnalysis
                             var txinfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "tx",0,1, "{\"txid\":\""+ txid + "\"}", "{}")[0];
                             var scripts = txinfo["scripts"] as JArray;
                             var sys_fee = txinfo["sys_fee"] as JArray;
+                            var net_fee = txinfo["net_fee"] as JArray;
                             var vout = txinfo["vout"] as JArray;
                             var blockindex = (uint)txinfo["blockindex"];
                             decimal neoAmount = 0;
@@ -96,7 +97,10 @@ namespace NeoBlockAnalysis
                                     neoAmount = BsonDecimal128.Create(neoAmount),
                                     gasAmount = BsonDecimal128.Create(gasAmount),
                                     contractHash = contractHash.ToString(),
-                                    time = time
+                                    time = time,
+                                    sys_fee = BsonDecimal128.Create(sys_fee),
+                                    net_fee = BsonDecimal128.Create(net_fee),
+                                    blockIndex = blockindex
                                 };
                                 //存进数据库
                                 MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "contract_call_info", c);
@@ -136,5 +140,8 @@ namespace NeoBlockAnalysis
         public BsonDecimal128 gasAmount;
         public string contractHash;
         public string time;
+        public BsonDecimal128 sys_fee;
+        public BsonDecimal128 net_fee;
+        public uint blockIndex ;
     }
 }
