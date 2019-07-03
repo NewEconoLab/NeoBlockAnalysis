@@ -25,7 +25,7 @@ namespace NeoBlockAnalysis
                     while (true)
                     {
                         var cli_TxIndex = (UInt32)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", 0, 1, "{counter:\"tx\"}")[0]["lastBlockindex"];
-                        if (blockindex <= cli_TxIndex)
+                        if (blockindex < cli_TxIndex)
                         {
                             StorageTx(blockindex);
                             blockindex++;

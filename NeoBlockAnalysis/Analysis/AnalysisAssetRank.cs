@@ -166,7 +166,7 @@ namespace NeoBlockAnalysis
                     else if (addressAssetBalacnes.Count == 0)
                         MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", dic[key]);
                     else
-                        Console.WriteLine("error:"+ assetid);
+                        Console.WriteLine("error:"+ assetid +"~~"+address);
 
                 }
 

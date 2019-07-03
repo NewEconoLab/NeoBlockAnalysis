@@ -27,7 +27,7 @@ namespace NeoBlockAnalysis
                     while (true)
                     {
                         int cli_blockindex = (int)MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "system_counter", 0, 1, "{counter:\"NEP5\"}")[0]["lastBlockindex"];
-                        if (blockindex <= cli_blockindex)
+                        if (blockindex < cli_blockindex)
                         {
                             StorageNep5Transfer(blockindex);
                             blockindex++;
