@@ -59,14 +59,15 @@ namespace NeoBlockAnalysis
                     var json = JObject.Parse(text);
                     if (!json.ContainsKey("VMState")|| !json.ContainsKey("script") || !((string)json["VMState"]).Contains("HALT"))
                         continue;
-                    foreach (var op in json["script"]["ops"].ToList())
+                    for(var n = 0;n< json["script"]["ops"].ToList().Count;n++)
                     {
+                        var op = json["script"]["ops"].ToList()[n];
                         if (op["op"].ToString() == "APPCALL" || op["op"].ToString() == "TAILCALL")
                         {
                             //取到的值是小端序的，要转换成大端序
-                            var contractHash =new ThinNeo.Hash160(ThinNeo.Helper.HexString2Bytes(op["param"].ToString()));
+                            var contractHash = new ThinNeo.Hash160(ThinNeo.Helper.HexString2Bytes(op["param"].ToString()));
                             //查询这个交易的发起人,用tx中的scripts中的verification来获得
-                            var txinfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "tx",0,1, "{\"txid\":\""+ txid + "\"}", "{}")[0];
+                            var txinfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "tx", 0, 1, "{\"txid\":\"" + txid + "\"}", "{}")[0];
                             var scripts = txinfo["scripts"] as JArray;
                             var sys_fee = (string)txinfo["sys_fee"];
                             var net_fee = (string)txinfo["net_fee"];
@@ -91,7 +92,8 @@ namespace NeoBlockAnalysis
                             {
                                 var verification = script["verification"].ToString();
                                 var address = Verification2Address(verification);
-                                ContractCallInfo c = new ContractCallInfo() {
+                                ContractCallInfo c = new ContractCallInfo()
+                                {
                                     txid = txid,
                                     address = address,
                                     neoAmount = BsonDecimal128.Create(neoAmount),
@@ -106,6 +108,25 @@ namespace NeoBlockAnalysis
                                 MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "contract_call_info", c);
                             }
                             break;
+                        }
+                        else if (op["op"].ToString() == "SYSCALL" && "Neo.Contract.Create" == System.Text.Encoding.UTF8.GetString(ThinNeo.Helper.HexString2Bytes(op["param"].ToString())))
+                        {
+                            var txinfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "tx", 0, 1, "{\"txid\":\"" + txid + "\"}", "{}")[0];
+                            var blockindex = (uint)txinfo["blockindex"];
+                            //根据高度获取时间戳
+                            var blockInfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "block", 0, 1, "{\"index\":" + blockindex + "}", "{}")[0];
+                            var time = (string)blockInfo["time"];
+                            var data =JObject.Parse(json["script"]["ops"].ToList()[n - 1]["result"].ToString())["ByteArray"].ToString();
+                            var bytes_data = ThinNeo.Helper.HexString2Bytes(data);
+                            ThinNeo.Hash160 scriptHash = ThinNeo.Helper_NEO.GetScriptHashFromScript(bytes_data);
+                            ContractCreateInfo contractCreateInfo = new ContractCreateInfo()
+                            {
+                                txid = txid,
+                                blockIndex = blockindex,
+                                time = time,
+                                contractHash = scriptHash.ToString()
+                            };
+                            MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "contract_create_info", contractCreateInfo);
                         }
                     }
                 }
@@ -144,4 +165,12 @@ namespace NeoBlockAnalysis
         public BsonDecimal128 net_fee;
         public uint blockIndex ;
     }
+    class ContractCreateInfo
+    {
+        public string txid;
+        public uint blockIndex;
+        public string time;
+        public string contractHash;
+    }
 }
+
