@@ -32,7 +32,14 @@ namespace NeoBlockAnalysis
                         int height = (int)query[0]["blockIndex"];
                         if (handlerHeight >= height)
                             continue;
-                        HandlerDumpInfos(handlerHeight);
+                        try
+                        {
+                            HandlerDumpInfos(handlerHeight);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("error"+e);
+                        }
                         handlerHeight++;
                     }
                 }
