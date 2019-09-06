@@ -64,7 +64,7 @@ namespace NeoBlockAnalysis
                     var outms = llvm.QuickFile.FromFile(ms);
                     var text = System.Text.Encoding.UTF8.GetString(outms.ToArray());
                     var json = JObject.Parse(text);
-                    if (!json.ContainsKey("VMState")|| !json.ContainsKey("script") || !((string)json["VMState"]).Contains("HALT"))
+                    if (!json.ContainsKey("VMState")|| !json.ContainsKey("script"))
                         continue;
                     for(var n = 0;n< json["script"]["ops"].ToList().Count;n++)
                     {
