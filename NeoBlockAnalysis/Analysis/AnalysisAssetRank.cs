@@ -23,13 +23,13 @@ namespace NeoBlockAnalysis
                 }
             });
             Task task_HandlerNep5 = new Task(() => {
-                try
+                //try
                 {
                     HandlerNep5();
                 }
-                catch (Exception e)
+                //catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                //    Console.WriteLine(e);
                 }
             });
             task_HandlerUtxo.Start();
@@ -76,7 +76,7 @@ namespace NeoBlockAnalysis
                         continue;
 
                     //除以精度
-                    var balance = decimal.Parse((string)query[i]["Balance"]) / decimal.Parse(Math.Pow(10,decimals).ToString());
+                    var balance = double.Parse((string)query[i]["Balance"]) / double.Parse(Math.Pow(10,decimals).ToString());
 
                     var addressAssetBalance = new AddressAssetBalance() { Address = address,AssetHash = assetid,Balance = BsonDecimal128.Create(balance.ToString()),LastUpdatedBlock = handlerHeight};
                     var addressAssetBalacnes = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase, "address_assetid_balance", "{Address:\"" + address + "\",AssetHash:\"" + assetid + "\"}");
