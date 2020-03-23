@@ -35,12 +35,12 @@ namespace NeoBlockAnalysis
                         try
                         {
                             HandlerDumpInfos(handlerHeight);
+                            handlerHeight++;
                         }
                         catch (Exception e)
                         {
                             Console.WriteLine("error"+e);
                         }
-                        handlerHeight++;
                     }
                 }
                 catch (Exception e)

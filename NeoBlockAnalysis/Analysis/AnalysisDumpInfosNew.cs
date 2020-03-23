@@ -17,7 +17,7 @@ namespace NeoBlockAnalysis
         {
             Task task = new Task(() =>
             {
-                //try
+                try
                 {
                     //获取已经处理到了哪个高度
                     var query = MongoDBHelper.Get(Program.mongodbConnStr, Program.mongodbDatabase, "system_counter", 0, 1, "{\"counter\":\"dumpInfosNew\"}", "{}");
@@ -32,20 +32,20 @@ namespace NeoBlockAnalysis
                         int height = (int)query[0]["blockIndex"];
                         if (handlerHeight >= height)
                             continue;
-                        //try
+                        try
                         {
                             HandlerDumpInfos(handlerHeight);
+                            handlerHeight++;
                         }
-                        //catch (Exception e)
+                        catch (Exception e)
                         {
-                        //   Console.WriteLine(handlerHeight+"   error:" + e);
+                           Console.WriteLine(handlerHeight+"   error:" + e);
                         }
-                        handlerHeight++;
                     }
                 }
-                //catch (Exception e)
+                catch (Exception e)
                 {
-                //    Console.WriteLine(e.Message);
+                    Console.WriteLine(e.Message);
                 }
             });
             task.Start();
@@ -64,7 +64,7 @@ namespace NeoBlockAnalysis
                     var outms = llvm.QuickFile.FromFile(ms);
                     var text = System.Text.Encoding.UTF8.GetString(outms.ToArray());
                     var json = JObject.Parse(text);
-                    if (!json.ContainsKey("VMState") || !json.ContainsKey("script"))
+                    if (!json.ContainsKey("VMState") || !json.ContainsKey("script") || json["VMState"].ToString() == "FAULT")
                         continue;
                     //查询这个交易的发起人,用tx中的scripts中的verification来获得
                     var txinfo = MongoDBHelper.Get(Program.neo_mongodbConnStr, Program.neo_mongodbDatabase, "tx", 0, 1, "{\"txid\":\"" + txid + "\"}", "{}")[0];
