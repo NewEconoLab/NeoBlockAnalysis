@@ -117,7 +117,7 @@ namespace NeoBlockAnalysis
                     level--;
                     //Console.WriteLine("RET:" + level);
                 }
-                else if (op["op"].ToString() == "SYSCALL" && op["params"] != null &&"Neo.Contract.Create" == System.Text.Encoding.UTF8.GetString(ThinNeo.Helper.HexString2Bytes(op["param"].ToString())))
+                else if (op["op"].ToString() == "SYSCALL" && op["param"] != null &&"Neo.Contract.Create" == System.Text.Encoding.UTF8.GetString(ThinNeo.Helper.HexString2Bytes(op["param"].ToString())))
                 {
                     var data = JObject.Parse(ops[n - 1]["result"].ToString())["ByteArray"].ToString();
                     var bytes_data = ThinNeo.Helper.HexString2Bytes(data);
@@ -127,7 +127,7 @@ namespace NeoBlockAnalysis
                     MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "contract_exec_detail", info);
                     index++;
                 }
-                else if (op["op"].ToString() == "SYSCALL" && op["params"] != null && "Neo.Contract.Migrate" == System.Text.Encoding.UTF8.GetString(ThinNeo.Helper.HexString2Bytes(op["param"].ToString())))
+                else if (op["op"].ToString() == "SYSCALL" && op["param"] != null && "Neo.Contract.Migrate" == System.Text.Encoding.UTF8.GetString(ThinNeo.Helper.HexString2Bytes(op["param"].ToString())))
                 {
                     var data = JObject.Parse(ops[n - 1]["result"].ToString())["ByteArray"].ToString();
                     var bytes_data = ThinNeo.Helper.HexString2Bytes(data);
@@ -137,7 +137,7 @@ namespace NeoBlockAnalysis
                     MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "contract_exec_detail", info);
                     index++;
                 }
-                else if (op["op"].ToString() == "SYSCALL" && op["params"] != null && "Neo.Contract.Destroy" == System.Text.Encoding.UTF8.GetString(ThinNeo.Helper.HexString2Bytes(op["param"].ToString())))
+                else if (op["op"].ToString() == "SYSCALL" && op["param"] != null && "Neo.Contract.Destroy" == System.Text.Encoding.UTF8.GetString(ThinNeo.Helper.HexString2Bytes(op["param"].ToString())))
                 {
                     var l = (int)level > froms.Count ? froms.Count - 1 : (int)level;
                     InvoeInfo info = new InvoeInfo() { from = froms[l], txid = txid, to = "", type = InvokeType.Destroy, index = index, level = level, blockIndex = blockIndex };
