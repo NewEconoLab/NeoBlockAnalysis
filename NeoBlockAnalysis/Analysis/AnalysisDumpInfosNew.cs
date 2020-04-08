@@ -86,9 +86,27 @@ namespace NeoBlockAnalysis
 
         void execOps(JArray ops,string txid,int blockIndex,List<string> froms,ref uint index,ref uint level,string sender)
         {
+            string _newScrptHash = "";
             for (var n = 0; n < ops.Count; n++)
             {
                 var op = ops[n];
+                if (op["op"].ToString() == "PICK")
+                {
+                    //记录疑似合约代码的result
+                    var newScript = JObject.Parse(op["result"].ToString())["ByteArray"]?.ToString();
+                    if (newScript !=null && newScript.Length > 1000)
+                    {
+                        try
+                        {
+                            var bytes_data = ThinNeo.Helper.HexString2Bytes(newScript);
+                            _newScrptHash = ThinNeo.Helper_NEO.GetScriptHashFromScript(bytes_data).ToString();
+                        }
+                        catch
+                        {
+                            
+                        }
+                    }
+                }
                 if (op["op"].ToString() == "APPCALL" || op["op"].ToString() == "TAILCALL")
                 {
                     //取到的值是小端序的，要转换成大端序
@@ -129,20 +147,8 @@ namespace NeoBlockAnalysis
                 }
                 else if (op["op"].ToString() == "SYSCALL" && op["param"] != null && "Neo.Contract.Migrate" == System.Text.Encoding.UTF8.GetString(ThinNeo.Helper.HexString2Bytes(op["param"].ToString())))
                 {
-                    var _to = "";
-                    try
-                    {
-                        var data = JObject.Parse(ops[n - 1]["result"].ToString())["ByteArray"].ToString();
-                        var bytes_data = ThinNeo.Helper.HexString2Bytes(data);
-                        ThinNeo.Hash160 scriptHash = ThinNeo.Helper_NEO.GetScriptHashFromScript(bytes_data);
-                        _to = scriptHash.ToString();
-                    }
-                    catch
-                    {
-                        
-                    }
                     var l = (int)level > froms.Count ? froms.Count - 1 : (int)level;
-                    InvoeInfo info = new InvoeInfo() { from = froms[l], txid = txid, to = _to, type = InvokeType.Update, index = index, level = level, blockIndex = blockIndex };
+                    InvoeInfo info = new InvoeInfo() { from = froms[l], txid = txid, to = _newScrptHash, type = InvokeType.Update, index = index, level = level, blockIndex = blockIndex };
                     MongoDBHelper.InsertOne(Program.mongodbConnStr, Program.mongodbDatabase, "contract_exec_detail", info);
                     index++;
                 }
